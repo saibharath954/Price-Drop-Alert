@@ -1,0 +1,31 @@
+# Node.js (frontend)
+frontend/node_modules/
+frontend/.env
+frontend/.next/
+frontend/.vite/
+frontend/dist/
+
+# Python (backend, if using FastAPI or similar)
+backend/__pycache__/
+backend/.env
+backend/env/
+backend/.venv/
+backend/venv/
+backend/*.pyc
+
+# Firebase
+.firebase/
+firebase-debug.log
+firestore.indexes.json
+firestore.rules
+
+# General
+*.log
+.DS_Store
+*.sqlite3
+.env
+.env.*
+*.pyc
+
+# OS/system files
+Thumbs.db
