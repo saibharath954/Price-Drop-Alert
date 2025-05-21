@@ -1,30 +1,35 @@
-
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardFooter,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { 
-  Dialog, 
-  DialogContent, 
+import {
+  Dialog,
+  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogDescription
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  ArrowDown, 
-  ArrowUp, 
-  Minus, 
-  ExternalLink, 
-  BellRing, 
-  Star, 
-  AlertCircle 
+import {
+  ArrowDown,
+  ArrowUp,
+  Minus,
+  ExternalLink,
+  BellRing,
+  Star,
+  AlertCircle,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
@@ -32,7 +37,7 @@ import { motion } from "framer-motion";
 interface PriceChange {
   amount: number;
   percentage: number;
-  direction: 'up' | 'down' | 'same';
+  direction: "up" | "down" | "same";
 }
 
 interface Product {
@@ -53,14 +58,21 @@ interface Product {
 
 interface ProductDisplayProps {
   product: Product;
-  onSetPriceAlert?: (productId: string, targetPrice: number, email: string) => void;
+  onSetPriceAlert?: (
+    productId: string,
+    targetPrice: number,
+    email: string,
+  ) => void;
 }
 
-export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps) => {
+export const ProductDisplay = ({
+  product,
+  onSetPriceAlert,
+}: ProductDisplayProps) => {
   const { theme } = useTheme();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [targetPrice, setTargetPrice] = useState<string>(
-    product.currentPrice ? (product.currentPrice * 0.9).toFixed(2) : ""
+    product.currentPrice ? (product.currentPrice * 0.9).toFixed(2) : "",
   );
   const [email, setEmail] = useState("");
 
@@ -70,9 +82,9 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
 
   const getPriceChangeIcon = () => {
     switch (product.priceChange.direction) {
-      case 'up':
+      case "up":
         return <ArrowUp className="h-5 w-5 text-red-500" />;
-      case 'down':
+      case "down":
         return <ArrowDown className="h-5 w-5 text-green-500" />;
       default:
         return <Minus className="h-5 w-5 text-gray-500" />;
@@ -81,12 +93,12 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
 
   const getPriceChangeColor = () => {
     switch (product.priceChange.direction) {
-      case 'up':
-        return 'text-red-600';
-      case 'down':
-        return 'text-green-600';
+      case "up":
+        return "text-red-600";
+      case "down":
+        return "text-green-600";
       default:
-        return 'text-gray-600';
+        return "text-gray-600";
     }
   };
 
@@ -101,25 +113,33 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
     const stars = [];
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 >= 0.5;
-    
+
     for (let i = 0; i < fullStars; i++) {
-      stars.push(<Star key={`star-${i}`} className="h-4 w-4 fill-yellow-400 text-yellow-400" />);
+      stars.push(
+        <Star
+          key={`star-${i}`}
+          className="h-4 w-4 fill-yellow-400 text-yellow-400"
+        />,
+      );
     }
-    
+
     if (hasHalfStar) {
       stars.push(
         <span key="half-star" className="relative">
           <Star className="h-4 w-4 text-gray-300" />
-          <Star className="absolute top-0 left-0 h-4 w-4 fill-yellow-400 text-yellow-400 overflow-hidden" style={{ clipPath: 'inset(0 50% 0 0)' }} />
-        </span>
+          <Star
+            className="absolute top-0 left-0 h-4 w-4 fill-yellow-400 text-yellow-400 overflow-hidden"
+            style={{ clipPath: "inset(0 50% 0 0)" }}
+          />
+        </span>,
       );
     }
-    
+
     const emptyStars = 5 - stars.length;
     for (let i = 0; i < emptyStars; i++) {
       stars.push(<Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />);
     }
-    
+
     return stars;
   };
 
@@ -129,76 +149,95 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
     >
-      <Card className={`overflow-hidden transition-all duration-300 ${
-        theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"
-      } hover:shadow-lg`}>
+      <Card
+        className={`overflow-hidden transition-all duration-300 ${
+          theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"
+        } hover:shadow-lg`}
+      >
         <CardHeader className="pb-0">
           <div className="flex items-center justify-between mb-1">
             {product.brand && (
-              <span className="text-sm font-medium text-gray-500">{product.brand}</span>
+              <span className="text-sm font-medium text-gray-500">
+                {product.brand}
+              </span>
             )}
-            <Badge variant={product.available ? "default" : "secondary"} 
-              className={product.available ? "bg-green-600" : ""}>
+            <Badge
+              variant={product.available ? "default" : "secondary"}
+              className={product.available ? "bg-green-600" : ""}
+            >
               {product.available ? "In Stock" : "Out of Stock"}
             </Badge>
           </div>
           <CardTitle className="line-clamp-2 leading-tight">
             {product.name}
           </CardTitle>
-          
+
           {product.rating && (
             <div className="flex items-center gap-1 mt-2">
               {renderRatingStars(product.rating)}
-              <span className="text-sm ml-1 text-gray-500">{product.rating.toFixed(1)}</span>
+              <span className="text-sm ml-1 text-gray-500">
+                {product.rating.toFixed(1)}
+              </span>
             </div>
           )}
         </CardHeader>
-        
+
         <CardContent className="pt-6">
           <Tabs defaultValue="details" className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="details">Details</TabsTrigger>
               <TabsTrigger value="price-history">Price History</TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="details" className="space-y-4">
               <div className="flex flex-col items-center">
                 <div className="h-48 w-full flex items-center justify-center mb-4">
-                  <img 
-                    src={product.image} 
-                    alt={product.name} 
+                  <img
+                    src={product.image}
+                    alt={product.name}
                     className="max-h-full max-w-full object-contain rounded"
                     loading="lazy"
                   />
                 </div>
-                
+
                 <div className="text-center mb-4 w-full">
-                  <div className="text-3xl font-bold mb-1">{formatPrice(product.currentPrice)}</div>
+                  <div className="text-3xl font-bold mb-1">
+                    {formatPrice(product.currentPrice)}
+                  </div>
                   <div className="flex items-center justify-center gap-2">
                     {getPriceChangeIcon()}
                     <span className={`${getPriceChangeColor()} font-medium`}>
-                      {product.priceChange.direction !== 'same' ? 
-                        `${product.priceChange.direction === 'up' ? '+' : ''}${formatPrice(product.priceChange.amount)} (${product.priceChange.percentage.toFixed(1)}%)` :
-                        'No change'}
+                      {product.priceChange.direction !== "same"
+                        ? `${product.priceChange.direction === "up" ? "+" : ""}${formatPrice(product.priceChange.amount)} (${product.priceChange.percentage.toFixed(1)}%)`
+                        : "No change"}
                     </span>
                   </div>
                 </div>
-                
+
                 <div className="grid grid-cols-2 gap-3 w-full">
-                  <Button variant="outline" onClick={() => setIsAlertDialogOpen(true)} className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAlertDialogOpen(true)}
+                    className="flex items-center gap-2"
+                  >
                     <BellRing className="h-4 w-4" />
                     Set Price Alert
                   </Button>
-                  
+
                   <Button asChild className="flex items-center gap-2">
-                    <a href={product.url} target="_blank" rel="noopener noreferrer">
-                      View on {product.source} <ExternalLink className="h-4 w-4" />
+                    <a
+                      href={product.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      View on {product.source}{" "}
+                      <ExternalLink className="h-4 w-4" />
                     </a>
                   </Button>
                 </div>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="price-history">
               <div className="space-y-4">
                 <div className="px-2 py-4 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
@@ -211,19 +250,27 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
                   <ul className="space-y-2 text-sm">
                     <li className="flex justify-between">
                       <span className="text-gray-500">Current</span>
-                      <span className="font-medium">{formatPrice(product.currentPrice)}</span>
+                      <span className="font-medium">
+                        {formatPrice(product.currentPrice)}
+                      </span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-gray-500">Previous</span>
-                      <span className="font-medium">{formatPrice(product.previousPrice)}</span>
+                      <span className="font-medium">
+                        {formatPrice(product.previousPrice)}
+                      </span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-gray-500">Highest (30 days)</span>
-                      <span className="font-medium">{formatPrice(product.currentPrice + 15)}</span>
+                      <span className="font-medium">
+                        {formatPrice(product.currentPrice + 15)}
+                      </span>
                     </li>
                     <li className="flex justify-between">
                       <span className="text-gray-500">Lowest (30 days)</span>
-                      <span className="font-medium">{formatPrice(product.currentPrice - 20)}</span>
+                      <span className="font-medium">
+                        {formatPrice(product.currentPrice - 20)}
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -231,9 +278,9 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
             </TabsContent>
           </Tabs>
         </CardContent>
-        
+
         <Separator />
-        
+
         <CardFooter className="px-6 py-4">
           <div className="w-full grid grid-cols-2 gap-2 text-sm">
             <div className="text-gray-500">Last Updated:</div>
@@ -252,16 +299,18 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
               We'll notify you when this product drops below your target price.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid gap-4 py-4">
             <div>
-              <Label htmlFor="alert-price">Target Price ({product.currency})</Label>
-              <Input 
-                id="alert-price" 
-                type="number" 
-                step="0.01" 
-                min="0" 
-                value={targetPrice} 
+              <Label htmlFor="alert-price">
+                Target Price ({product.currency})
+              </Label>
+              <Input
+                id="alert-price"
+                type="number"
+                step="0.01"
+                min="0"
+                value={targetPrice}
                 onChange={(e) => setTargetPrice(e.target.value)}
                 placeholder={`e.g. ${(product.currentPrice * 0.9).toFixed(2)}`}
               />
@@ -271,21 +320,24 @@ export const ProductDisplay = ({ product, onSetPriceAlert }: ProductDisplayProps
             </div>
             <div>
               <Label htmlFor="alert-email">Email Address</Label>
-              <Input 
-                id="alert-email" 
-                type="email" 
-                value={email} 
+              <Input
+                id="alert-email"
+                type="email"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
               />
             </div>
           </div>
-          
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAlertDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSetAlert}>
-              Create Alert
+            <Button
+              variant="outline"
+              onClick={() => setIsAlertDialogOpen(false)}
+            >
+              Cancel
             </Button>
+            <Button onClick={handleSetAlert}>Create Alert</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -303,25 +355,25 @@ export const ProductDisplaySkeleton = () => {
         </div>
         <Skeleton className="h-7 w-full mb-1" />
         <Skeleton className="h-7 w-3/4" />
-        
+
         <div className="flex items-center gap-1 mt-3">
           {[...Array(5)].map((_, i) => (
             <Skeleton key={i} className="h-4 w-4 rounded-full" />
           ))}
         </div>
       </CardHeader>
-      
+
       <CardContent className="pt-6">
         <div className="space-y-4">
           <div className="flex justify-center">
             <Skeleton className="h-40 w-40 rounded" />
           </div>
-          
+
           <div className="text-center space-y-2">
             <Skeleton className="h-8 w-24 mx-auto" />
             <Skeleton className="h-5 w-36 mx-auto" />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-3">
             <Skeleton className="h-10 w-full rounded" />
             <Skeleton className="h-10 w-full rounded" />

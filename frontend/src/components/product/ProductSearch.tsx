@@ -1,27 +1,26 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
-  CardTitle 
+  CardTitle,
 } from "@/components/ui/card";
-import { 
+import {
   Accordion,
   AccordionContent,
   AccordionItem,
-  AccordionTrigger 
+  AccordionTrigger,
 } from "@/components/ui/accordion";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger
+  TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader, ArrowRight, InfoIcon } from "lucide-react";
@@ -42,23 +41,24 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
 
   const validateUrl = (value: string): boolean => {
     // Basic validation for Amazon URL format
-    const amazonUrlRegex = /^https?:\/\/(www\.)?(amazon\.com|amazon\.co\.uk|amazon\.in|amazon\.ca|amazon\.de|amazon\.fr|amazon\.es|amazon\.it|amazon\.co\.jp)\/[^\s]+$/i;
+    const amazonUrlRegex =
+      /^https?:\/\/(www\.)?(amazon\.com|amazon\.co\.uk|amazon\.in|amazon\.ca|amazon\.de|amazon\.fr|amazon\.es|amazon\.it|amazon\.co\.jp)\/[^\s]+$/i;
     return amazonUrlRegex.test(value);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!url) {
       setError("Please enter a product URL");
       return;
     }
-    
+
     if (!validateUrl(url)) {
       setError("Please enter a valid Amazon product URL");
       return;
     }
-    
+
     setError(null);
     const targetPriceNum = targetPrice ? parseFloat(targetPrice) : undefined;
     onSubmit(url, targetPriceNum, email || undefined);
@@ -69,14 +69,19 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
       <div className="grid gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Label htmlFor="product-url" className="text-base font-medium">Amazon Product URL</Label>
+            <Label htmlFor="product-url" className="text-base font-medium">
+              Amazon Product URL
+            </Label>
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <InfoIcon className="h-4 w-4 text-gray-400 cursor-help" />
                 </TooltipTrigger>
                 <TooltipContent>
-                  <p className="max-w-xs">Paste the full Amazon product URL from your browser's address bar</p>
+                  <p className="max-w-xs">
+                    Paste the full Amazon product URL from your browser's
+                    address bar
+                  </p>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
@@ -96,21 +101,26 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
               aria-invalid={error ? "true" : "false"}
               aria-describedby={error ? "url-error" : undefined}
             />
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isLoading}
               className="absolute right-0 top-0 rounded-l-none h-full"
             >
               {isLoading ? (
-                <><Loader className="mr-2 h-4 w-4 animate-spin" /> Tracking</>
+                <>
+                  <Loader className="mr-2 h-4 w-4 animate-spin" /> Tracking
+                </>
               ) : (
-                <>Start Tracking<ArrowRight className="ml-2 h-4 w-4" /></>
+                <>
+                  Start Tracking
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </>
               )}
             </Button>
           </div>
           {error && (
-            <motion.p 
-              id="url-error" 
+            <motion.p
+              id="url-error"
               className="mt-2 text-sm text-red-500"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
@@ -129,7 +139,10 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
             <AccordionContent>
               <div className="grid gap-4 pt-2">
                 <div>
-                  <Label htmlFor="target-price" className="flex items-center gap-2 mb-2">
+                  <Label
+                    htmlFor="target-price"
+                    className="flex items-center gap-2 mb-2"
+                  >
                     Target Price
                     <TooltipProvider>
                       <Tooltip>
@@ -137,7 +150,10 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
                           <InfoIcon className="h-4 w-4 text-gray-400 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>We'll notify you when the price drops below this amount</p>
+                          <p>
+                            We'll notify you when the price drops below this
+                            amount
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -154,7 +170,10 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email" className="flex items-center gap-2 mb-2">
+                  <Label
+                    htmlFor="email"
+                    className="flex items-center gap-2 mb-2"
+                  >
                     Email for Price Alerts
                     <TooltipProvider>
                       <Tooltip>
@@ -162,7 +181,10 @@ export const ProductSearch = ({ onSubmit, isLoading }: ProductSearchProps) => {
                           <InfoIcon className="h-4 w-4 text-gray-400 cursor-help" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>We'll send you an email when the price reaches your target</p>
+                          <p>
+                            We'll send you an email when the price reaches your
+                            target
+                          </p>
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>

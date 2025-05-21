@@ -1,4 +1,3 @@
-
 import { Link } from "react-router-dom";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useTheme } from "@/hooks/useTheme";
@@ -17,23 +16,28 @@ import { LogOut, Settings, UserCheck } from "lucide-react";
 export const Header = () => {
   const { theme } = useTheme();
   const { user, logout } = useUser();
-  
-  const getInitials = (name: string) => {
+
+  const getInitials = (name?: string | null) => {
+    if (!name) return "US";
     return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
-  
+
   return (
-    <header className={`border-b ${theme === "dark" ? "border-gray-800" : "border-gray-200"} transition-colors duration-300`}>
+    <header
+      className={`border-b ${theme === "dark" ? "border-gray-800" : "border-gray-200"} transition-colors duration-300`}
+    >
       <div className="container mx-auto px-4 py-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Link to="/" className="flex items-center gap-2">
-              <div className={`rounded-md p-1 ${theme === "dark" ? "bg-blue-600" : "bg-blue-500"}`}>
+              <div
+                className={`rounded-md p-1 ${theme === "dark" ? "bg-blue-600" : "bg-blue-500"}`}
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -50,54 +54,87 @@ export const Header = () => {
               <span className="font-bold text-xl">PricePulse</span>
             </Link>
           </div>
-          
+
           <nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
-            <Link to="/" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Home</Link>
-            <Link to="/how-it-works" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">How It Works</Link>
-            <Link to="/about" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">About</Link>
+            <Link
+              to="/"
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              Home
+            </Link>
+            <Link
+              to="/how-it-works"
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              How It Works
+            </Link>
+            <Link
+              to="/about"
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            >
+              About
+            </Link>
             {user && (
-              <Link to="/dashboard" className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors">Dashboard</Link>
+              <Link
+                to="/dashboard"
+                className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+              >
+                Dashboard
+              </Link>
             )}
           </nav>
 
           <div className="flex items-center gap-4">
             <ThemeToggle />
-            
+
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full" asChild>
-                    <div>
-                      <Avatar className="h-9 w-9">
-                        <AvatarImage src={user.avatar} alt={user.name} />
-                        <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
-                      </Avatar>
-                    </div>
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full"
+                  >
+                    <Avatar className="h-9 w-9">
+                      <AvatarImage
+                        src={user.photoURL || undefined}
+                        alt={user.displayName || "User"}
+                      />
+                      <AvatarFallback>
+                        {getInitials(user.displayName)}
+                      </AvatarFallback>
+                    </Avatar>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <div className="flex flex-col space-y-1 p-2">
-                    <p className="text-sm font-medium">{user.name}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="text-sm font-medium">
+                      {user.displayName || "User"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {user.email}
+                    </p>
                   </div>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
-                    <Link to="/dashboard" className="flex w-full cursor-pointer items-center">
+                    <Link
+                      to="/dashboard"
+                      className="flex w-full cursor-pointer items-center"
+                    >
                       <UserCheck className="mr-2 h-4 w-4" />
                       <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
-                    <Link to="/settings" className="flex w-full cursor-pointer items-center">
+                    <Link
+                      to="/settings"
+                      className="flex w-full cursor-pointer items-center"
+                    >
                       <Settings className="mr-2 h-4 w-4" />
                       <span>Settings</span>
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    className="cursor-pointer"
-                    onClick={logout}
-                  >
+                  <DropdownMenuItem className="cursor-pointer" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>

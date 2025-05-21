@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from "react";
 
 type Theme = "light" | "dark";
@@ -14,20 +13,22 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
     // Check if user has previously set a theme preference
     const savedTheme = localStorage.getItem("theme") as Theme;
-    
+
     // Check if user has a system preference
     if (!savedTheme) {
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)",
+      ).matches;
       return prefersDark ? "dark" : "light";
     }
-    
+
     return savedTheme || "light";
   });
 
   useEffect(() => {
     // Update localStorage when theme changes
     localStorage.setItem("theme", theme);
-    
+
     // Update document root class for global styles
     if (theme === "dark") {
       document.documentElement.classList.add("dark");

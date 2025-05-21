@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Layout } from "@/components/layout/Layout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
@@ -31,12 +30,12 @@ const getSampleTrackedProducts = () => {
       priceChange: {
         amount: -50,
         percentage: 4.3,
-        direction: 'down' as const
-      }
+        direction: "down" as const,
+      },
     },
     {
       id: "product2",
-      name: "Apple MacBook Pro 14\" with M2 Pro Chip, 16GB RAM, 512GB SSD",
+      name: 'Apple MacBook Pro 14" with M2 Pro Chip, 16GB RAM, 512GB SSD',
       image: "https://via.placeholder.com/300x300.png?text=MacBook+Pro",
       currentPrice: 1999.99,
       currency: "$",
@@ -46,8 +45,8 @@ const getSampleTrackedProducts = () => {
       priceChange: {
         amount: 0,
         percentage: 0,
-        direction: 'stable' as const
-      }
+        direction: "stable" as const,
+      },
     },
     {
       id: "product3",
@@ -62,8 +61,8 @@ const getSampleTrackedProducts = () => {
       priceChange: {
         amount: 25,
         percentage: 7.7,
-        direction: 'up' as const
-      }
+        direction: "up" as const,
+      },
     },
     {
       id: mockProductData.id,
@@ -77,11 +76,11 @@ const getSampleTrackedProducts = () => {
       priceChange: {
         amount: -15,
         percentage: 3.8,
-        direction: 'down' as const
-      }
-    }
+        direction: "down" as const,
+      },
+    },
   ];
-  
+
   return products;
 };
 
@@ -95,27 +94,30 @@ const Dashboard = () => {
   const { theme } = useTheme();
   const { user } = useUser();
   const { toast } = useToast();
-  
+
   // Stats calculated from tracked products
   const totalTracked = trackedProducts.length;
-  const averagePrice = trackedProducts.length > 0 
-    ? trackedProducts.reduce((sum, item) => sum + item.currentPrice, 0) / trackedProducts.length 
-    : 0;
+  const averagePrice =
+    trackedProducts.length > 0
+      ? trackedProducts.reduce((sum, item) => sum + item.currentPrice, 0) /
+        trackedProducts.length
+      : 0;
   const averageSavings = 28.45; // Sample data - would be calculated from price history
-  const lowestPrice = trackedProducts.length > 0 
-    ? {
-        name: "Sony WH-1000XM5",
-        price: 349.99,
-        discount: 20
-      }
-    : undefined;
+  const lowestPrice =
+    trackedProducts.length > 0
+      ? {
+          name: "Sony WH-1000XM5",
+          price: 349.99,
+          discount: 20,
+        }
+      : undefined;
 
   useEffect(() => {
     // Simulate API call to fetch user's tracked products
     const fetchTrackedProducts = async () => {
       try {
         // Simulate API delay
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
         setTrackedProducts(getSampleTrackedProducts());
       } catch (error) {
         console.error("Error fetching tracked products:", error);
@@ -133,17 +135,19 @@ const Dashboard = () => {
   }, [toast]);
 
   const handleToggleAlert = (productId: string) => {
-    setTrackedProducts(prev => 
-      prev.map(product => 
-        product.id === productId 
-          ? { ...product, alertEnabled: !product.alertEnabled } 
-          : product
-      )
+    setTrackedProducts((prev) =>
+      prev.map((product) =>
+        product.id === productId
+          ? { ...product, alertEnabled: !product.alertEnabled }
+          : product,
+      ),
     );
   };
 
   const handleRemoveProduct = (productId: string) => {
-    setTrackedProducts(prev => prev.filter(product => product.id !== productId));
+    setTrackedProducts((prev) =>
+      prev.filter((product) => product.id !== productId),
+    );
   };
 
   const handleAddNewProduct = async () => {
@@ -157,11 +161,11 @@ const Dashboard = () => {
     }
 
     setIsAdding(true);
-    
+
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       // Example new product
       const newProduct = {
         id: `product${Date.now()}`,
@@ -175,14 +179,14 @@ const Dashboard = () => {
         priceChange: {
           amount: 0,
           percentage: 0,
-          direction: 'stable' as const
-        }
+          direction: "stable" as const,
+        },
       };
-      
-      setTrackedProducts(prev => [newProduct, ...prev]);
+
+      setTrackedProducts((prev) => [newProduct, ...prev]);
       setNewProductUrl("");
       setShowNewProductInput(false);
-      
+
       toast({
         title: "Product added",
         description: "The product is now being tracked!",
@@ -198,8 +202,8 @@ const Dashboard = () => {
     }
   };
 
-  const filteredProducts = trackedProducts.filter(product =>
-    product.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredProducts = trackedProducts.filter((product) =>
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
@@ -214,13 +218,15 @@ const Dashboard = () => {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
               <div>
                 <h1 className="text-3xl font-bold">Your Dashboard</h1>
-                <p className={`mt-1 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}>
+                <p
+                  className={`mt-1 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}
+                >
                   Manage your tracked products and price alerts
                 </p>
               </div>
-              <Button 
+              <Button
                 onClick={() => setShowNewProductInput(!showNewProductInput)}
-                className={`${showNewProductInput ? 'bg-gray-500 hover:bg-gray-600' : ''}`}
+                className={`${showNewProductInput ? "bg-gray-500 hover:bg-gray-600" : ""}`}
               >
                 {showNewProductInput ? (
                   <>
@@ -233,16 +239,20 @@ const Dashboard = () => {
                 )}
               </Button>
             </div>
-            
+
             {showNewProductInput && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+                animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 className="mb-6"
               >
-                <div className={`p-4 rounded-lg border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}>
-                  <h2 className="text-lg font-semibold mb-3">Add new product to track</h2>
+                <div
+                  className={`p-4 rounded-lg border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
+                >
+                  <h2 className="text-lg font-semibold mb-3">
+                    Add new product to track
+                  </h2>
                   <div className="flex gap-2">
                     <Input
                       placeholder="Paste Amazon product URL..."
@@ -250,7 +260,7 @@ const Dashboard = () => {
                       onChange={(e) => setNewProductUrl(e.target.value)}
                       className="flex-1"
                     />
-                    <Button 
+                    <Button
                       onClick={handleAddNewProduct}
                       disabled={isAdding || !newProductUrl.trim()}
                     >
@@ -260,7 +270,7 @@ const Dashboard = () => {
                 </div>
               </motion.div>
             )}
-            
+
             {!isLoading && (
               <DashboardStats
                 totalTracked={totalTracked}
@@ -270,7 +280,7 @@ const Dashboard = () => {
                 lowestPrice={lowestPrice}
               />
             )}
-            
+
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
               <h2 className="text-2xl font-semibold">Your Tracked Products</h2>
               <div className="flex gap-2 w-full sm:w-auto">
@@ -288,7 +298,7 @@ const Dashboard = () => {
                 </Button>
               </div>
             </div>
-            
+
             {isLoading ? (
               <TrackedProductsSkeleton />
             ) : filteredProducts.length > 0 ? (
@@ -298,7 +308,7 @@ const Dashboard = () => {
                 transition={{ duration: 0.5 }}
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               >
-                {filteredProducts.map(product => (
+                {filteredProducts.map((product) => (
                   <TrackedProductCard
                     key={product.id}
                     product={product}
@@ -314,17 +324,23 @@ const Dashboard = () => {
                 </div>
                 <h3 className="text-xl font-medium mb-2">No products found</h3>
                 {searchQuery ? (
-                  <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                    No products match your search. Try a different term or clear your search.
+                  <p
+                    className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    No products match your search. Try a different term or clear
+                    your search.
                   </p>
                 ) : (
-                  <p className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}>
-                    You're not tracking any products yet. Click "Track New Product" to get started.
+                  <p
+                    className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                  >
+                    You're not tracking any products yet. Click "Track New
+                    Product" to get started.
                   </p>
                 )}
                 {searchQuery && (
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     onClick={() => setSearchQuery("")}
                     className="mt-4"
                   >
@@ -332,7 +348,7 @@ const Dashboard = () => {
                   </Button>
                 )}
                 {!searchQuery && (
-                  <Button 
+                  <Button
                     onClick={() => setShowNewProductInput(true)}
                     className="mt-4"
                   >
