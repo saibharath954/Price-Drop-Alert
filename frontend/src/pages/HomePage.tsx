@@ -12,9 +12,7 @@ import HowItWorks from "@/components/sections/HowItWorks";
 import Testimonials from "@/components/sections/Testimonials";
 import FAQ from "@/components/sections/FAQ";
 
-// Assuming this is your actual component for the product URL input and tracking
-// IMPORTANT: Verify this path. If your TrackProduct is in src/pages/, consider moving it to src/components/
-import TrackProduct from "@/pages/TrackProduct"; // Renamed import to avoid conflict
+import TrackProduct from "@/pages/TrackProduct"; 
 
 // Existing product related components
 import { ProductSearch } from "@/components/product/ProductSearch";
