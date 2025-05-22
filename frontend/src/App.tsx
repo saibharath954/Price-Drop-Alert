@@ -5,13 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { UserProvider } from "@/contexts/UserContext";
-import Index from "./pages/Index";
+
+// Import your new HomePage (which was previously Index.tsx)
+import HomePage from "./pages/HomePage"; // Renamed from Index to HomePage
+
+// Import other pages
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
-import HowItWorks from "./pages/HowItWorks";
-import About from "./pages/About";
 import NotFound from "./pages/NotFound";
 import ProductDetail from "./pages/ProductDetail";
 
@@ -26,13 +28,13 @@ const App = () => (
         <BrowserRouter>
           <UserProvider>
             <Routes>
-              <Route path="/" element={<Index />} />
+              {/* This is your main landing page route, now handled by HomePage */}
+              <Route path="/" element={<HomePage />} />{" "}
+              {/* HomePage will render the Layout, Header, etc. */}
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/how-it-works" element={<HowItWorks />} />
-              <Route path="/about" element={<About />} />
               <Route path="/product/:productId" element={<ProductDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

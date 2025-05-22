@@ -1,7 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Layout } from "@/components/layout/Layout";
-import { Hero } from "@/components/sections/Hero";
+import { useTheme } from "@/hooks/useTheme";
+import { useToast } from "@/hooks/use-toast";
+import { motion } from "framer-motion";
+
+// Section components for the landing page
+import Hero from "@/components/sections/Hero";
+import Features from "@/components/sections/Features";
+import HowItWorks from "@/components/sections/HowItWorks";
+import Testimonials from "@/components/sections/Testimonials";
+import FAQ from "@/components/sections/FAQ";
+
+// Assuming this is your actual component for the product URL input and tracking
+// IMPORTANT: Verify this path. If your TrackProduct is in src/pages/, consider moving it to src/components/
+import TrackProduct from "@/pages/TrackProduct"; // Renamed import to avoid conflict
+
+// Existing product related components
 import { ProductSearch } from "@/components/product/ProductSearch";
 import {
   ProductDisplay,
@@ -15,12 +30,13 @@ import {
   ProductComparison,
   ProductComparisonSkeleton,
 } from "@/components/product/ProductComparison";
-import { useToast } from "@/hooks/use-toast";
-import { mockPriceData, mockProductData } from "@/lib/mockData";
-import { motion } from "framer-motion";
+
+// UI components from shadcn/ui
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useTheme } from "@/hooks/useTheme";
+
+// Mock data (keep this as is)
+import { mockPriceData, mockProductData } from "@/lib/mockData";
 
 const mockPlatforms = [
   {
@@ -66,7 +82,7 @@ const mockPlatforms = [
   },
 ];
 
-const Index = () => {
+const HomePage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [productData, setProductData] = useState<any>(null);
@@ -81,6 +97,7 @@ const Index = () => {
     email?: string,
   ) => {
     if (!url || !url.includes("amazon")) {
+      // Assuming your backend only supports Amazon for now
       toast({
         title: "Invalid URL",
         description: "Please enter a valid Amazon product URL",
@@ -90,7 +107,7 @@ const Index = () => {
     }
 
     setIsLoading(true);
-    setIsSubmitted(true);
+    setIsSubmitted(true); // Set isSubmitted to true to reveal results section
 
     // Scroll to results after a brief delay
     setTimeout(() => {
@@ -100,7 +117,7 @@ const Index = () => {
       }
     }, 500);
 
-    // In a real app, this would be a fetch to our backend API
+    // In a real app, this would be a fetch to your backend API
     try {
       // Simulate API call delay
       await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -152,7 +169,8 @@ const Index = () => {
 
   return (
     <Layout>
-      <Hero onTrackProduct={handleSubmit} />
+      <Hero />
+      <TrackProduct onSubmit={handleSubmit} isLoading={isLoading} />
 
       {isSubmitted && (
         <div id="results" className="container mx-auto px-4 py-8">
@@ -170,6 +188,7 @@ const Index = () => {
                     <TabsTrigger value="analytics">Analytics</TabsTrigger>
                   </TabsList>
 
+                  {/* ProductSearch here allows searching again within the results section */}
                   <div className="flex justify-end">
                     <ProductSearch
                       onSubmit={handleSubmit}
@@ -241,74 +260,22 @@ const Index = () => {
         </div>
       )}
 
-      <div className="container mx-auto px-4 py-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          <Card
-            className={`transition-all duration-300 hover:shadow-lg ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-blue-100 dark:bg-blue-900 p-2 rounded-full text-blue-600 dark:text-blue-300">
-                  1
-                </span>
-                Enter URL
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-300">
-                Paste the Amazon product URL you want to track. Our system will
-                extract all the essential product information.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`transition-all duration-300 hover:shadow-lg ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-green-100 dark:bg-green-900 p-2 rounded-full text-green-600 dark:text-green-300">
-                  2
-                </span>
-                Track Prices
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-300">
-                We'll monitor the product price 24/7 across multiple retailers
-                and keep a detailed history of all price changes.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card
-            className={`transition-all duration-300 hover:shadow-lg ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <span className="bg-purple-100 dark:bg-purple-900 p-2 rounded-full text-purple-600 dark:text-purple-300">
-                  3
-                </span>
-                Get Alerts
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600 dark:text-gray-300">
-                Set your target price, and we'll notify you instantly when the
-                price drops below that threshold so you never miss a deal.
-              </p>
-            </CardContent>
-          </Card>
-        </motion.div>
+      <div id="features">
+        <Features />
+      </div>
+      <div id="how-it-works-section">
+        {" "}
+        {/* Matches the ID in Header.tsx */}
+        <HowItWorks />
+      </div>
+      <div id="testimonials">
+        <Testimonials />
+      </div>
+      <div id="faq">
+        <FAQ />
       </div>
     </Layout>
   );
 };
 
-export default Index;
+export default HomePage;
