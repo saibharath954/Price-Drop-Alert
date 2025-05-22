@@ -67,32 +67,6 @@ const Testimonials = () => {
       verified: true,
       category: "tech",
     },
-    {
-      name: "Meera Reddy",
-      role: "Homemaker",
-      location: "Hyderabad, India",
-      image: "/api/placeholder/64/64",
-      rating: 5,
-      savings: "₹6,200",
-      content:
-        "Perfect for household shopping! I track everything from kitchen appliances to groceries. The email alerts are super helpful and the price charts make it easy to decide when to buy.",
-      highlight: "Household budget saver",
-      verified: true,
-      category: "home",
-    },
-    {
-      name: "Vikram Singh",
-      role: "College Student",
-      location: "Jaipur, India",
-      image: "/api/placeholder/64/64",
-      rating: 5,
-      savings: "₹4,800",
-      content:
-        "Being a student, budget is tight. PricePulse helps me get the best deals on books, electronics, and daily essentials. The interface is super intuitive and the savings are real!",
-      highlight: "Student budget savior",
-      verified: true,
-      category: "student",
-    },
   ];
 
   const stats = [
@@ -247,7 +221,7 @@ const Testimonials = () => {
         </motion.div>
 
         {/* Testimonials Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 mb-16">
           {testimonials.map((testimonial, index) => (
             <motion.div
               key={index}

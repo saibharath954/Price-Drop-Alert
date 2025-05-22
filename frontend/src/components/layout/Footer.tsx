@@ -24,7 +24,15 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/how-it-works"
+                  href="/"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  Features
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
                   How It Works
@@ -32,10 +40,18 @@ export const Footer = () => {
               </li>
               <li>
                 <a
-                  href="/about"
+                  href="/"
                   className="text-gray-300 hover:text-white transition-colors"
                 >
-                  About
+                  Testimonials
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/"
+                  className="text-gray-300 hover:text-white transition-colors"
+                >
+                  FAQ
                 </a>
               </li>
             </ul>

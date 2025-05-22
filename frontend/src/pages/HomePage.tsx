@@ -12,7 +12,7 @@ import HowItWorks from "@/components/sections/HowItWorks";
 import Testimonials from "@/components/sections/Testimonials";
 import FAQ from "@/components/sections/FAQ";
 
-import TrackProduct from "@/pages/TrackProduct"; 
+import TrackProduct from "@/pages/TrackProduct";
 
 // Existing product related components
 import { ProductSearch } from "@/components/product/ProductSearch";
