@@ -3,13 +3,15 @@ from fastapi import FastAPI, HTTPException, Depends, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, Union # Added Union for PriceChange
 from datetime import datetime
 import logging
-from .scraper.amazon import AmazonScraper # Assuming this path is correct
-from .firebase.client import FirebaseClient
 import os
 import traceback
+
+# Local imports (ensure these paths are correct relative to your project structure)
+from .scraper.amazon import AmazonScraper
+from .firebase.client import FirebaseClient
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -66,9 +68,9 @@ class ScrapePreviewResponse(BaseModel):
     url: str
 
 class TrackRequest(ScrapeRequest):
-    userId: str # Should ideally be derived from token, not sent by client
+    # userId: str # Removed this - userId should come from the token for security
     targetPrice: Optional[float] = None
-    email: Optional[str] = None # Should ideally be derived from token if verified by Firebase
+    # email: Optional[str] = None # Removed this - email should come from the token for security
 
 class AlertToggleRequest(BaseModel):
     productId: str
@@ -85,7 +87,7 @@ class ProductResponse(BaseModel):
     alertEnabled: bool
     targetPrice: Optional[float] # Can be None if no alert set or disabled
     lastUpdated: str # Will be ISO formatted datetime string
-    priceChange: PriceChange
+    priceChange: PriceChange # Ensure PriceChange is a Pydantic model itself
 
 class PriceHistoryEntry(BaseModel):
     date: str # ISO formatted datetime string
@@ -124,9 +126,11 @@ async def scrape_preview(request: ScrapeRequest):
     """
     try:
         product_data = await scraper.scrape(request.url)
-        # Ensure scraper returns expected keys
-        if not all(k in product_data for k in ["name", "image", "price", "url"]):
-             raise ValueError("Scraper returned incomplete data.")
+        # Ensure scraper returns expected keys and handle missing optional ones
+        required_keys = ["name", "image", "price", "url"]
+        if not all(k in product_data for k in required_keys):
+            logger.error(f"Scraper returned incomplete data for URL '{request.url}': Missing one of {required_keys}")
+            raise ValueError("Scraper returned incomplete data.")
         
         product_id = scraper.generate_product_id(request.url) # Ensure this is robust
         
@@ -135,7 +139,7 @@ async def scrape_preview(request: ScrapeRequest):
             name=product_data["name"],
             image=product_data["image"],
             currentPrice=product_data["price"],
-            currency=product_data.get("currency", "USD"), # Default if not scraped
+            currency=product_data.get("currency", "Rs"), # Default if not scraped
             url=request.url
         )
     except Exception as e:
@@ -155,27 +159,19 @@ async def track_product(
     If the product is already tracked by the user, it will update its details.
     """
     try:
-        # It's safer to use the userId from the authenticated token
-        # than to rely on the client sending it in the request body.
         user_id_from_token = user['uid']
-        user_email_from_token = user.get('email', None) # Get email from token if available
-
-        # Optional: You might want to remove request.userId from TrackRequest Pydantic model
-        # if you always want to rely on the token for userId.
-        if request.userId and request.userId != user_id_from_token:
-             logger.warning(f"Client-provided userId ({request.userId}) mismatch with token userId ({user_id_from_token}). Using token userId.")
+        user_email_from_token = user.get('email', None) 
         
         # Scrape fresh data again (or consider caching/deduplication for performance)
         product_data = await scraper.scrape(request.url)
         product_id = scraper.generate_product_id(request.url)
         
-        # Save to Firestore
         await firebase.track_product(
             product_id=product_id,
             user_id=user_id_from_token,
             product_data=product_data,
             target_price=request.targetPrice,
-            email=request.email or user_email_from_token # Prefer request email if provided, else token email
+            email=user_email_from_token # Always use email from token for security and consistency
         )
         
         return {"message": "Product tracking initiated successfully", "productId": product_id}
@@ -192,13 +188,16 @@ async def track_product(
 async def get_user_products(user: dict = Depends(verify_token)):
     """Retrieves all products currently tracked by the authenticated user."""
     try:
-        products = await firebase.get_user_products(user_id=user['uid'])
-        if not products:
+        # Crucial change: Extract the 'products' list from the dictionary response
+        firebase_response = await firebase.get_user_products(user_id=user['uid'])
+        products_list = firebase_response.get("products", [])
+
+        if not products_list:
             logger.info(f"No products found for user {user['uid']}.")
-            return []
+            return [] # Return an empty list if no products or an error
         
         # Explicitly validate and return the ProductResponse list
-        return [ProductResponse(**p) for p in products]
+        return [ProductResponse(**p) for p in products_list]
     except Exception as e:
         logger.error(f"Failed to fetch products for user '{user.get('uid')}': {traceback.format_exc()}")
         raise HTTPException(
@@ -213,7 +212,6 @@ async def get_product_details(
 ):
     """
     Retrieves detailed information for a single product tracked by the authenticated user.
-    This addresses the original 405 error by providing a GET endpoint for individual products.
     """
     try:
         product_details = await firebase.get_single_product(product_id=product_id, user_id=user['uid'])
@@ -249,8 +247,11 @@ async def toggle_product_alert(
                     detail="Target price is required when enabling an alert."
                 )
             # Ensure the user is actually tracking the product before setting an alert
-            user_products = await firebase.get_user_products(user['uid'])
-            if not any(p['id'] == request.productId for p in user_products):
+            # Fetch user's tracked products to validate ownership
+            user_tracked_products_response = await firebase.get_user_products(user['uid'])
+            user_tracked_product_ids = [p['id'] for p in user_tracked_products_response.get("products", [])]
+
+            if request.productId not in user_tracked_product_ids:
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="You can only set alerts for products you are tracking."

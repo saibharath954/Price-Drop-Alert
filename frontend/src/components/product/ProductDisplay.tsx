@@ -84,7 +84,7 @@ export const ProductDisplay = ({
   const [email, setEmail] = useState("");
 
   const formatPrice = (price: number) => {
-    return `${product.currency}${price.toFixed(2)}`;
+    return `${product.currency} ${price.toFixed(2)}`;
   };
 
   const getPriceChangeIcon = () => {

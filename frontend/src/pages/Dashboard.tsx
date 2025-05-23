@@ -75,38 +75,6 @@ const Dashboard = () => {
         }
       : undefined;
 
-  const fetchTrackedProducts = async () => {
-    if (!user || !token) {
-      setIsLoading(false);
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-      const response = await axios.get("/api/user/products", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      const products = response.data.products.map((product: any) => ({
-        ...product,
-        priceChange: calculatePriceChange(product.priceHistory || []),
-      }));
-
-      setTrackedProducts(products);
-    } catch (error) {
-      console.error("Error fetching tracked products:", error);
-      toast({
-        title: "Error fetching products",
-        description: "There was an issue loading your tracked products.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const calculatePriceChange = (priceHistory: any[]): PriceChange => {
     if (priceHistory.length < 2) {
       return {
@@ -127,6 +95,39 @@ const Dashboard = () => {
       percentage,
       direction,
     };
+  };    
+
+  const fetchTrackedProducts = async () => {
+    if (!user || !token) {
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await axios.get("/api/user/products", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+       const products = (response.data ?? []).map((product: any) => ({
+        ...product,
+        priceChange: calculatePriceChange(product.priceHistory || []),
+      }));
+      console.log("Fetched products:", products);
+
+      setTrackedProducts(products);
+    } catch (error) {
+      console.error("Error fetching tracked products:", error);
+      toast({
+        title: "Error fetching products",
+        description: "There was an issue loading your tracked products.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

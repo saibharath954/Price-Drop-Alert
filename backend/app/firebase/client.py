@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional, Union
 from dotenv import load_dotenv
 import logging
 from google.cloud.firestore_v1 import DocumentSnapshot
+from google.cloud.firestore_v1.field_path import FieldPath # Import FieldPath directly
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -157,8 +158,8 @@ class FirebaseClient:
             @firestore.transactional
             def update_alert_in_transaction(transaction, alerts_ref, product_id, user_id, target_price, email):
                 query = (alerts_ref.where("productId", "==", product_id)
-                                  .where("userId", "==", user_id)
-                                  .limit(1))
+                                    .where("userId", "==", user_id)
+                                    .limit(1))
                 
                 docs = query.get(transaction=transaction)
                 now = datetime.now()
@@ -196,8 +197,8 @@ class FirebaseClient:
         try:
             alerts_ref = self.db.collection("alerts")
             query = (alerts_ref.where("productId", "==", product_id)
-                             .where("userId", "==", user_id)
-                             .limit(1))
+                               .where("userId", "==", user_id)
+                               .limit(1))
             
             docs = query.get()
             if docs:
@@ -240,31 +241,36 @@ class FirebaseClient:
             logger.error(f"Failed to remove product tracking for '{product_id}' (user '{user_id}'): {traceback.format_exc()}")
             raise
 
-    async def get_user_products(self, user_id: str) -> List[Dict[str, Any]]:
-        """Get all products tracked by a user with proper error handling."""
+    async def get_user_products(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
+        """Get all products tracked by a user and format for API response."""
         try:
             user_doc = self.db.collection("users").document(user_id).get()
             if not user_doc.exists:
                 logger.info(f"No user document found for ID: {user_id}")
-                return []
+                return {"products": []}  # Return an empty list within the "products" key
             
-            # Fixed: Properly handle DocumentSnapshot access
             tracked_product_ids = user_doc.to_dict().get("trackedProducts", [])
             if not tracked_product_ids:
-                return []
+                return {"products": []} # Return an empty list within the "products" key
             
             # Get all alerts for this user in one query
             alerts = self._get_user_alerts(user_id)
             
             # Get all products in batch
-            products = self._get_products_batch(tracked_product_ids)
+            products = await self._get_products_batch(tracked_product_ids) # Await this call
             
             # Combine data
-            return [
-                self._format_product_data(prod_id, prod_data, alerts.get(prod_id, {}))
-                for prod_id, prod_data in products.items()
-                if prod_data is not None
-            ]
+            enriched_products = []
+            for prod_id in tracked_product_ids:
+                prod_data = products.get(prod_id)
+                if not prod_data:
+                    logger.warning(f"Missing product data for ID: {prod_id}, skipping.")
+                    continue
+
+                alert_data = alerts.get(prod_id, {})
+                enriched_products.append(self._format_product_data(prod_id, prod_data, alert_data))
+
+            return {"products": enriched_products} # Wrap the list in a dictionary with the key "products"
         except Exception as e:
             logger.error(f"Failed to get products for user '{user_id}': {traceback.format_exc()}")
             raise
@@ -280,22 +286,24 @@ class FirebaseClient:
             for alert in alerts_query.stream()
         }
 
-    def _get_products_batch(self, product_ids: List[str]) -> Dict[str, Optional[Dict[str, Any]]]:
+    async def _get_products_batch(self, product_ids: List[str]) -> Dict[str, Optional[Dict[str, Any]]]:
         """Helper to get multiple products in a single batch."""
         if not product_ids:
             return {}
-        
+            
         # Split into chunks of 10 to avoid Firestore limits
         chunk_size = 10
         chunks = [product_ids[i:i + chunk_size] for i in range(0, len(product_ids), chunk_size)]
         results = {}
         
         for chunk in chunks:
-            docs = self.db.collection("products").where(firestore.FieldPath.document_id(), "in", chunk).stream()
+            # Use `in` query for efficient batch fetching
+            # Corrected: Use FieldPath from google.cloud.firestore_v1.field_path
+            docs = self.db.collection("products").where(FieldPath.document_id(), "in", chunk).stream()
             for doc in docs:
                 results[doc.id] = doc.to_dict()
         
-        # Include None for any products not found
+        # Include None for any products not found (useful for debugging, but we filter these out later)
         for pid in product_ids:
             if pid not in results:
                 results[pid] = None
@@ -310,6 +318,8 @@ class FirebaseClient:
     ) -> Dict[str, Any]:
         """Format product data for API response."""
         if product_data is None:
+            # This case should ideally be handled by filtering out missing products earlier,
+            # but it's good to have a fallback.
             return {
                 "id": product_id,
                 "error": "Product data not found"
@@ -338,11 +348,13 @@ class FirebaseClient:
         try:
             # Verify user is tracking this product
             if not await self._is_user_tracking_product(user_id, product_id):
+                logger.warning(f"User {user_id} is not tracking product {product_id}.")
                 return None
                 
             # Get product data
             product_doc = self.db.collection("products").document(product_id).get()
             if not product_doc.exists:
+                logger.warning(f"Product {product_id} not found in 'products' collection.")
                 return None
                 
             product_data = product_doc.to_dict()
@@ -366,9 +378,9 @@ class FirebaseClient:
     async def _get_product_alert_info(self, product_id: str, user_id: str) -> Dict[str, Any]:
         """Get alert info for a specific product-user pair."""
         query = (self.db.collection("alerts")
-                      .where("productId", "==", product_id)
-                      .where("userId", "==", user_id)
-                      .limit(1))
+                         .where("productId", "==", product_id)
+                         .where("userId", "==", user_id)
+                         .limit(1))
         
         docs = query.get()
         if not docs:
@@ -385,6 +397,7 @@ class FirebaseClient:
         try:
             doc = self.db.collection("products").document(product_id).get()
             if not doc.exists:
+                logger.info(f"No price history found for product ID: {product_id}")
                 return []
                 
             data = doc.to_dict()
