@@ -11,88 +11,37 @@ import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { Plus, Search, SlidersHorizontal, X } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
-import { mockProductData, mockPriceData } from "@/lib/mockData";
 import { Link } from "react-router-dom";
+import axios from "axios";
 
-// Sample tracked products data
-const getSampleTrackedProducts = () => {
-  const products = [
-    {
-      id: "product1",
-      name: "Samsung Galaxy S22 Ultra 5G (Phantom Black, 12GB, 256GB Storage)",
-      image: "https://via.placeholder.com/300x300.png?text=Samsung+Galaxy",
-      currentPrice: 1099.99,
-      currency: "$",
-      url: "https://example.com/product1",
-      alertEnabled: true,
-      targetPrice: 999.99,
-      lastUpdated: "2024-05-15T14:30:00Z",
-      priceChange: {
-        amount: -50,
-        percentage: 4.3,
-        direction: "down" as const,
-      },
-    },
-    {
-      id: "product2",
-      name: 'Apple MacBook Pro 14" with M2 Pro Chip, 16GB RAM, 512GB SSD',
-      image: "https://via.placeholder.com/300x300.png?text=MacBook+Pro",
-      currentPrice: 1999.99,
-      currency: "$",
-      url: "https://example.com/product2",
-      alertEnabled: false,
-      lastUpdated: "2024-05-20T10:15:00Z",
-      priceChange: {
-        amount: 0,
-        percentage: 0,
-        direction: "stable" as const,
-      },
-    },
-    {
-      id: "product3",
-      name: "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
-      image: "https://via.placeholder.com/300x300.png?text=Sony+Headphones",
-      currentPrice: 349.99,
-      currency: "$",
-      url: "https://example.com/product3",
-      alertEnabled: true,
-      targetPrice: 299.99,
-      lastUpdated: "2024-05-18T09:45:00Z",
-      priceChange: {
-        amount: 25,
-        percentage: 7.7,
-        direction: "up" as const,
-      },
-    },
-    {
-      id: mockProductData.id,
-      name: mockProductData.name,
-      image: mockProductData.image,
-      currentPrice: mockProductData.currentPrice,
-      currency: mockProductData.currency,
-      url: mockProductData.url,
-      alertEnabled: false,
-      lastUpdated: "2024-05-21T08:30:00Z",
-      priceChange: {
-        amount: -15,
-        percentage: 3.8,
-        direction: "down" as const,
-      },
-    },
-  ];
+interface PriceChange {
+  amount: number;
+  percentage: number;
+  direction: "up" | "down" | "stable";
+}
 
-  return products;
-};
+interface TrackedProduct {
+  id: string;
+  name: string;
+  image: string;
+  currentPrice: number;
+  currency: string;
+  url: string;
+  alertEnabled: boolean;
+  targetPrice?: number;
+  lastUpdated: string;
+  priceChange: PriceChange;
+}
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
-  const [trackedProducts, setTrackedProducts] = useState<any[]>([]);
+  const [trackedProducts, setTrackedProducts] = useState<TrackedProduct[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [showNewProductInput, setShowNewProductInput] = useState(false);
   const [newProductUrl, setNewProductUrl] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const { theme } = useTheme();
-  const { user } = useUser();
+  const { user, token } = useUser();
   const { toast } = useToast();
 
   // Stats calculated from tracked products
@@ -102,52 +51,154 @@ const Dashboard = () => {
       ? trackedProducts.reduce((sum, item) => sum + item.currentPrice, 0) /
         trackedProducts.length
       : 0;
-  const averageSavings = 28.45; // Sample data - would be calculated from price history
+
+  // Calculate average savings based on price changes
+  const averageSavings =
+    trackedProducts.length > 0
+      ? trackedProducts.reduce((sum, product) => {
+          if (product.priceChange.direction === "down") {
+            return sum + product.priceChange.amount;
+          }
+          return sum;
+        }, 0) / trackedProducts.length
+      : 0;
+
+  // Find the product with the lowest current price
   const lowestPrice =
     trackedProducts.length > 0
       ? {
-          name: "Sony WH-1000XM5",
-          price: 349.99,
-          discount: 20,
+          name: trackedProducts.reduce((prev, current) =>
+            prev.currentPrice < current.currentPrice ? prev : current,
+          ).name,
+          price: Math.min(...trackedProducts.map((p) => p.currentPrice)),
+          discount: 0, // This would need actual calculation based on historical data
         }
       : undefined;
 
-  useEffect(() => {
-    // Simulate API call to fetch user's tracked products
-    const fetchTrackedProducts = async () => {
-      try {
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setTrackedProducts(getSampleTrackedProducts());
-      } catch (error) {
-        console.error("Error fetching tracked products:", error);
-        toast({
-          title: "Error fetching products",
-          description: "There was an issue loading your tracked products.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchTrackedProducts = async () => {
+    if (!user || !token) {
+      setIsLoading(false);
+      return;
+    }
 
-    fetchTrackedProducts();
-  }, [toast]);
+    try {
+      setIsLoading(true);
+      const response = await axios.get("/api/user/products", {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  const handleToggleAlert = (productId: string) => {
-    setTrackedProducts((prev) =>
-      prev.map((product) =>
-        product.id === productId
-          ? { ...product, alertEnabled: !product.alertEnabled }
-          : product,
-      ),
-    );
+      const products = response.data.products.map((product: any) => ({
+        ...product,
+        priceChange: calculatePriceChange(product.priceHistory || []),
+      }));
+
+      setTrackedProducts(products);
+    } catch (error) {
+      console.error("Error fetching tracked products:", error);
+      toast({
+        title: "Error fetching products",
+        description: "There was an issue loading your tracked products.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleRemoveProduct = (productId: string) => {
-    setTrackedProducts((prev) =>
-      prev.filter((product) => product.id !== productId),
-    );
+  const calculatePriceChange = (priceHistory: any[]): PriceChange => {
+    if (priceHistory.length < 2) {
+      return {
+        amount: 0,
+        percentage: 0,
+        direction: "stable",
+      };
+    }
+
+    const current = priceHistory[0].price;
+    const previous = priceHistory[1].price;
+    const amount = current - previous;
+    const percentage = (Math.abs(amount) / previous) * 100;
+    const direction = amount > 0 ? "up" : amount < 0 ? "down" : "stable";
+
+    return {
+      amount: Math.abs(amount),
+      percentage,
+      direction,
+    };
+  };
+
+  useEffect(() => {
+    fetchTrackedProducts();
+  }, [user, token]);
+
+  const handleToggleAlert = async (productId: string) => {
+    if (!user || !token) return;
+
+    try {
+      // Get the current product to determine the new state
+      const product = trackedProducts.find((p) => p.id === productId);
+      if (!product) return;
+
+      const newAlertState = !product.alertEnabled;
+
+      await axios.post(
+        "/api/product/alert",
+        {
+          productId,
+          enable: newAlertState,
+          targetPrice: product.targetPrice,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setTrackedProducts((prev) =>
+        prev.map((product) =>
+          product.id === productId
+            ? { ...product, alertEnabled: newAlertState }
+            : product,
+        ),
+      );
+    } catch (error) {
+      console.error("Error toggling alert:", error);
+      toast({
+        title: "Error updating alert",
+        description: "There was an issue updating your price alert.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveProduct = async (productId: string) => {
+    if (!user || !token) return;
+
+    try {
+      await axios.delete(`/api/product/${productId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTrackedProducts((prev) =>
+        prev.filter((product) => product.id !== productId),
+      );
+      toast({
+        title: "Product removed",
+        description: "The product is no longer being tracked.",
+      });
+    } catch (error) {
+      console.error("Error removing product:", error);
+      toast({
+        title: "Error removing product",
+        description: "There was an issue removing this product.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddNewProduct = async () => {
@@ -163,35 +214,60 @@ const Dashboard = () => {
     setIsAdding(true);
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (user && token) {
+        // Authenticated flow - track the product
+        const response = await axios.post(
+          "/api/track",
+          {
+            url: newProductUrl,
+            userId: user.uid,
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
 
-      // Example new product
-      const newProduct = {
-        id: `product${Date.now()}`,
-        name: "New Tracked Product - " + newProductUrl.slice(0, 20) + "...",
-        image: "https://via.placeholder.com/300x300.png?text=New+Product",
-        currentPrice: Math.floor(Math.random() * 500) + 100,
-        currency: "$",
-        url: newProductUrl,
-        alertEnabled: false,
-        lastUpdated: new Date().toISOString(),
-        priceChange: {
-          amount: 0,
-          percentage: 0,
-          direction: "stable" as const,
-        },
-      };
+        // Fetch the newly added product details
+        const productResponse = await axios.get(
+          `/api/product/${response.data.productId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
 
-      setTrackedProducts((prev) => [newProduct, ...prev]);
+        setTrackedProducts((prev) => [
+          {
+            ...productResponse.data,
+            priceChange: {
+              amount: 0,
+              percentage: 0,
+              direction: "stable",
+            },
+          },
+          ...prev,
+        ]);
+      } else {
+        // Unauthenticated flow - just show a preview
+        const response = await axios.post("/api/scrape-preview", {
+          url: newProductUrl,
+        });
+
+        toast({
+          title: "Please sign in to track products",
+          description:
+            "You can preview products without signing in, but need an account to track them.",
+          variant: "default",
+        });
+      }
+
       setNewProductUrl("");
       setShowNewProductInput(false);
-
-      toast({
-        title: "Product added",
-        description: "The product is now being tracked!",
-      });
     } catch (error) {
+      console.error("Error adding product:", error);
       toast({
         title: "Error adding product",
         description: "There was an issue adding this product.",
@@ -221,23 +297,27 @@ const Dashboard = () => {
                 <p
                   className={`mt-1 ${theme === "dark" ? "text-gray-300" : "text-gray-600"}`}
                 >
-                  Manage your tracked products and price alerts
+                  {user
+                    ? "Manage your tracked products and price alerts"
+                    : "Sign in to track products and get price alerts"}
                 </p>
               </div>
-              <Button
-                onClick={() => setShowNewProductInput(!showNewProductInput)}
-                className={`${showNewProductInput ? "bg-gray-500 hover:bg-gray-600" : ""}`}
-              >
-                {showNewProductInput ? (
-                  <>
-                    <X className="mr-2 h-4 w-4" /> Cancel
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" /> Track New Product
-                  </>
-                )}
-              </Button>
+              {user && (
+                <Button
+                  onClick={() => setShowNewProductInput(!showNewProductInput)}
+                  className={`${showNewProductInput ? "bg-gray-500 hover:bg-gray-600" : ""}`}
+                >
+                  {showNewProductInput ? (
+                    <>
+                      <X className="mr-2 h-4 w-4" /> Cancel
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="mr-2 h-4 w-4" /> Track New Product
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
 
             {showNewProductInput && (
@@ -251,7 +331,7 @@ const Dashboard = () => {
                   className={`p-4 rounded-lg border ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white border-gray-200"}`}
                 >
                   <h2 className="text-lg font-semibold mb-3">
-                    Add new product to track
+                    {user ? "Add new product to track" : "Preview a product"}
                   </h2>
                   <div className="flex gap-2">
                     <Input
@@ -264,44 +344,54 @@ const Dashboard = () => {
                       onClick={handleAddNewProduct}
                       disabled={isAdding || !newProductUrl.trim()}
                     >
-                      {isAdding ? "Adding..." : "Track"}
+                      {isAdding
+                        ? user
+                          ? "Adding..."
+                          : "Previewing..."
+                        : user
+                          ? "Track"
+                          : "Preview"}
                     </Button>
                   </div>
                 </div>
               </motion.div>
             )}
 
-            {!isLoading && (
+            {!isLoading && user && (
               <DashboardStats
                 totalTracked={totalTracked}
                 averagePrice={averagePrice}
-                currency="$"
+                currency={trackedProducts[0]?.currency || "$"}
                 averageSavings={averageSavings}
                 lowestPrice={lowestPrice}
               />
             )}
 
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-              <h2 className="text-2xl font-semibold">Your Tracked Products</h2>
-              <div className="flex gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:flex-initial">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-9"
-                  />
+            {user && (
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <h2 className="text-2xl font-semibold">
+                  Your Tracked Products
+                </h2>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="relative flex-1 sm:flex-initial">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                  <Button variant="outline" size="icon">
+                    <SlidersHorizontal className="h-4 w-4" />
+                  </Button>
                 </div>
-                <Button variant="outline" size="icon">
-                  <SlidersHorizontal className="h-4 w-4" />
-                </Button>
               </div>
-            </div>
+            )}
 
             {isLoading ? (
               <TrackedProductsSkeleton />
-            ) : filteredProducts.length > 0 ? (
+            ) : user && filteredProducts.length > 0 ? (
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -312,8 +402,8 @@ const Dashboard = () => {
                   <TrackedProductCard
                     key={product.id}
                     product={product}
-                    onToggleAlert={handleToggleAlert}
-                    onRemove={handleRemoveProduct}
+                    onToggleAlert={() => handleToggleAlert(product.id)}
+                    onRemove={() => handleRemoveProduct(product.id)}
                   />
                 ))}
               </motion.div>
@@ -322,38 +412,61 @@ const Dashboard = () => {
                 <div className="mx-auto w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center mb-4">
                   <Search className="h-12 w-12 text-gray-400" />
                 </div>
-                <h3 className="text-xl font-medium mb-2">No products found</h3>
-                {searchQuery ? (
-                  <p
-                    className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
-                  >
-                    No products match your search. Try a different term or clear
-                    your search.
-                  </p>
+                {user ? (
+                  <>
+                    <h3 className="text-xl font-medium mb-2">
+                      {searchQuery
+                        ? "No products found"
+                        : "No tracked products yet"}
+                    </h3>
+                    {searchQuery ? (
+                      <p
+                        className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        No products match your search. Try a different term or
+                        clear your search.
+                      </p>
+                    ) : (
+                      <p
+                        className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
+                      >
+                        You're not tracking any products yet. Click "Track New
+                        Product" to get started.
+                      </p>
+                    )}
+                    {searchQuery && (
+                      <Button
+                        variant="outline"
+                        onClick={() => setSearchQuery("")}
+                        className="mt-4"
+                      >
+                        Clear Search
+                      </Button>
+                    )}
+                    {!searchQuery && (
+                      <Button
+                        onClick={() => setShowNewProductInput(true)}
+                        className="mt-4"
+                      >
+                        <Plus className="mr-2 h-4 w-4" /> Track New Product
+                      </Button>
+                    )}
+                  </>
                 ) : (
-                  <p
-                    className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
-                  >
-                    You're not tracking any products yet. Click "Track New
-                    Product" to get started.
-                  </p>
-                )}
-                {searchQuery && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setSearchQuery("")}
-                    className="mt-4"
-                  >
-                    Clear Search
-                  </Button>
-                )}
-                {!searchQuery && (
-                  <Button
-                    onClick={() => setShowNewProductInput(true)}
-                    className="mt-4"
-                  >
-                    <Plus className="mr-2 h-4 w-4" /> Track New Product
-                  </Button>
+                  <>
+                    <h3 className="text-xl font-medium mb-2">
+                      Sign in to track products
+                    </h3>
+                    <p
+                      className={`${theme === "dark" ? "text-gray-400" : "text-gray-500"} mb-6`}
+                    >
+                      You can preview products without signing in, but need an
+                      account to track them and get price alerts.
+                    </p>
+                    <Button asChild>
+                      <Link to="/signin">Sign In</Link>
+                    </Button>
+                  </>
                 )}
               </div>
             )}

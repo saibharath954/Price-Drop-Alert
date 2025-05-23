@@ -30,9 +30,11 @@ import {
   BellRing,
   Star,
   AlertCircle,
+  LogIn,
 } from "lucide-react";
 import { useTheme } from "@/hooks/useTheme";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PriceChange {
   amount: number;
@@ -63,13 +65,18 @@ interface ProductDisplayProps {
     targetPrice: number,
     email: string,
   ) => void;
+  isPreview?: boolean;
+  onLoginRequest?: () => void;
 }
 
 export const ProductDisplay = ({
   product,
   onSetPriceAlert,
+  isPreview = false,
+  onLoginRequest,
 }: ProductDisplayProps) => {
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
   const [isAlertDialogOpen, setIsAlertDialogOpen] = useState(false);
   const [targetPrice, setTargetPrice] = useState<string>(
     product.currentPrice ? (product.currentPrice * 0.9).toFixed(2) : "",
@@ -103,6 +110,11 @@ export const ProductDisplay = ({
   };
 
   const handleSetAlert = () => {
+    if (!isAuthenticated && onLoginRequest) {
+      onLoginRequest();
+      return;
+    }
+
     if (onSetPriceAlert && targetPrice && email) {
       onSetPriceAlert(product.id, parseFloat(targetPrice), email);
       setIsAlertDialogOpen(false);
@@ -219,9 +231,10 @@ export const ProductDisplay = ({
                     variant="outline"
                     onClick={() => setIsAlertDialogOpen(true)}
                     className="flex items-center gap-2"
+                    disabled={isPreview}
                   >
                     <BellRing className="h-4 w-4" />
-                    Set Price Alert
+                    {isPreview ? "Login to Set Alert" : "Set Price Alert"}
                   </Button>
 
                   <Button asChild className="flex items-center gap-2">
@@ -242,38 +255,44 @@ export const ProductDisplay = ({
               <div className="space-y-4">
                 <div className="px-2 py-4 rounded-md bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
                   <p className="text-sm text-gray-500 dark:text-gray-400 italic">
-                    Price history visualization would display here
+                    {isPreview
+                      ? "Price history available after tracking"
+                      : "Price history visualization would display here"}
                   </p>
                 </div>
-                <div>
-                  <h4 className="font-medium mb-2 text-sm">Price Statistics</h4>
-                  <ul className="space-y-2 text-sm">
-                    <li className="flex justify-between">
-                      <span className="text-gray-500">Current</span>
-                      <span className="font-medium">
-                        {formatPrice(product.currentPrice)}
-                      </span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-gray-500">Previous</span>
-                      <span className="font-medium">
-                        {formatPrice(product.previousPrice)}
-                      </span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-gray-500">Highest (30 days)</span>
-                      <span className="font-medium">
-                        {formatPrice(product.currentPrice + 15)}
-                      </span>
-                    </li>
-                    <li className="flex justify-between">
-                      <span className="text-gray-500">Lowest (30 days)</span>
-                      <span className="font-medium">
-                        {formatPrice(product.currentPrice - 20)}
-                      </span>
-                    </li>
-                  </ul>
-                </div>
+                {!isPreview && (
+                  <div>
+                    <h4 className="font-medium mb-2 text-sm">
+                      Price Statistics
+                    </h4>
+                    <ul className="space-y-2 text-sm">
+                      <li className="flex justify-between">
+                        <span className="text-gray-500">Current</span>
+                        <span className="font-medium">
+                          {formatPrice(product.currentPrice)}
+                        </span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-gray-500">Previous</span>
+                        <span className="font-medium">
+                          {formatPrice(product.previousPrice)}
+                        </span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-gray-500">Highest (30 days)</span>
+                        <span className="font-medium">
+                          {formatPrice(product.currentPrice + 15)}
+                        </span>
+                      </li>
+                      <li className="flex justify-between">
+                        <span className="text-gray-500">Lowest (30 days)</span>
+                        <span className="font-medium">
+                          {formatPrice(product.currentPrice - 20)}
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -289,6 +308,25 @@ export const ProductDisplay = ({
             </div>
           </div>
         </CardFooter>
+
+        {isPreview && (
+          <CardFooter className="border-t p-4">
+            <div className="w-full text-center">
+              <p className="text-sm text-gray-500 mb-3">
+                This is a preview. Log in to track this product and view full
+                price history.
+              </p>
+              <Button
+                onClick={onLoginRequest}
+                className="gap-2 w-full"
+                size="lg"
+              >
+                <LogIn className="h-4 w-4" />
+                Log in to Track
+              </Button>
+            </div>
+          </CardFooter>
+        )}
       </Card>
 
       <Dialog open={isAlertDialogOpen} onOpenChange={setIsAlertDialogOpen}>
@@ -296,49 +334,71 @@ export const ProductDisplay = ({
           <DialogHeader>
             <DialogTitle>Set Price Alert</DialogTitle>
             <DialogDescription>
-              We'll notify you when this product drops below your target price.
+              {!isAuthenticated
+                ? "Please log in to set price alerts"
+                : "We'll notify you when this product drops below your target price."}
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 py-4">
-            <div>
-              <Label htmlFor="alert-price">
-                Target Price ({product.currency})
-              </Label>
-              <Input
-                id="alert-price"
-                type="number"
-                step="0.01"
-                min="0"
-                value={targetPrice}
-                onChange={(e) => setTargetPrice(e.target.value)}
-                placeholder={`e.g. ${(product.currentPrice * 0.9).toFixed(2)}`}
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Current price: {formatPrice(product.currentPrice)}
-              </p>
-            </div>
-            <div>
-              <Label htmlFor="alert-email">Email Address</Label>
-              <Input
-                id="alert-email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="your@email.com"
-              />
-            </div>
-          </div>
+          {isAuthenticated ? (
+            <>
+              <div className="grid gap-4 py-4">
+                <div>
+                  <Label htmlFor="alert-price">
+                    Target Price ({product.currency})
+                  </Label>
+                  <Input
+                    id="alert-price"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={targetPrice}
+                    onChange={(e) => setTargetPrice(e.target.value)}
+                    placeholder={`e.g. ${(product.currentPrice * 0.9).toFixed(2)}`}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Current price: {formatPrice(product.currentPrice)}
+                  </p>
+                </div>
+                <div>
+                  <Label htmlFor="alert-email">Email Address</Label>
+                  <Input
+                    id="alert-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                  />
+                </div>
+              </div>
 
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setIsAlertDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handleSetAlert}>Create Alert</Button>
-          </DialogFooter>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAlertDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSetAlert}
+                  disabled={!targetPrice || !email}
+                >
+                  Create Alert
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <div className="py-6 text-center">
+              <Button
+                onClick={onLoginRequest}
+                className="gap-2 mx-auto"
+                size="lg"
+              >
+                <LogIn className="h-4 w-4" />
+                Log in to Continue
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </motion.div>

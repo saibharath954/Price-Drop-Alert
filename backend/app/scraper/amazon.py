@@ -35,7 +35,7 @@ class AmazonScraper:
     async def _scrape_with_playwright(self, url: str) -> Dict[str, Any]:
         """Scrape using Playwright (more reliable but heavier)"""
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False)
+            browser = await p.chromium.launch(headless=True)
             context = await browser.new_context(
                 user_agent=self.headers["User-Agent"]
             )
@@ -89,9 +89,13 @@ class AmazonScraper:
         match = re.search(asin_pattern, url)
         return match.group(1) if match else None
 
-    def _clean_price(self, price_str: str) -> float:
-        """Convert price string to float"""
-        return float(re.sub(r'[^\d.]', '', price_str))
+    def _clean_price(self, price_str: str) -> float | None:
+        """Convert price string to float, return None if invalid"""
+        clean_str = re.sub(r'[^\d.]', '', price_str)
+        try:
+            return float(clean_str)
+        except ValueError:
+            return None
 
     def _get_proxies(self):
         """Optional: Implement proxy rotation if needed"""

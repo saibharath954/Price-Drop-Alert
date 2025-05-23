@@ -4,6 +4,7 @@ import { Layout } from "@/components/layout/Layout";
 import { useTheme } from "@/hooks/useTheme";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 
 // Section components for the landing page
 import Hero from "@/components/sections/Hero";
@@ -33,125 +34,136 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-// Mock data (keep this as is)
-import { mockPriceData, mockProductData } from "@/lib/mockData";
-
-const mockPlatforms = [
-  {
-    platform: "Amazon",
-    currentPrice: mockProductData.currentPrice,
-    currency: "$",
-    url: mockProductData.url,
-    available: true,
-    priceHistory: mockPriceData,
-    logo: "https://via.placeholder.com/100x100.png?text=Amazon",
-    shipping: 0,
-    trend: "down" as const,
-    trendAmount: 100,
-  },
-  {
-    platform: "Walmart",
-    currentPrice: mockProductData.currentPrice + 15,
-    currency: "$",
-    url: "https://walmart.com",
-    available: true,
-    priceHistory: mockPriceData.map((item) => ({
-      ...item,
-      price: item.price + 15 + Math.random() * 5,
-    })),
-    logo: "https://via.placeholder.com/100x100.png?text=Walmart",
-    shipping: 5.99,
-    trend: "stable" as const,
-  },
-  {
-    platform: "BestBuy",
-    currentPrice: mockProductData.currentPrice - 10,
-    currency: "$",
-    url: "https://bestbuy.com",
-    available: false,
-    priceHistory: mockPriceData.map((item) => ({
-      ...item,
-      price: item.price - 10 - Math.random() * 5,
-    })),
-    logo: "https://via.placeholder.com/100x100.png?text=BestBuy",
-    shipping: 0,
-    trend: "up" as const,
-    trendAmount: 5,
-  },
-];
-
 const HomePage = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<any>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [productData, setProductData] = useState<any>(null);
   const [priceData, setPriceData] = useState<any[]>([]);
   const { toast } = useToast();
   const navigate = useNavigate();
   const { theme } = useTheme();
+  const { isAuthenticated } = useAuth();
 
-  const handleSubmit = async (
-    url: string,
-    targetPrice?: number,
-    email?: string,
-  ) => {
-    if (!url || !url.includes("amazon")) {
-      // Assuming your backend only supports Amazon for now
+  const handlePreview = async (url: string) => {
+    if (!url) {
       toast({
         title: "Invalid URL",
-        description: "Please enter a valid Amazon product URL",
+        description: "Please enter a product URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate URL format
+    try {
+      new URL(url); // This will throw if URL is invalid
+    } catch (error) {
+      toast({
+        title: "Invalid URL",
+        description:
+          "Please enter a valid URL starting with http:// or https://",
         variant: "destructive",
       });
       return;
     }
 
     setIsLoading(true);
-    setIsSubmitted(true); // Set isSubmitted to true to reveal results section
 
-    // Scroll to results after a brief delay
-    setTimeout(() => {
-      const resultsSection = document.getElementById("results");
-      if (resultsSection) {
-        resultsSection.scrollIntoView({ behavior: "smooth" });
-      }
-    }, 500);
-
-    // In a real app, this would be a fetch to your backend API
     try {
-      // Simulate API call delay
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Add additional fields to mock data
-      const enhancedProductData = {
-        ...mockProductData,
-        rating: 4.7,
-        brand: "Samsung",
-      };
-
-      setProductData(enhancedProductData);
-      setPriceData(mockPriceData);
-
-      toast({
-        title: "Product tracked successfully!",
-        description: "We'll start tracking this product's price.",
+      const response = await fetch("/api/scrape-preview", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url,
+          // Add any additional required fields here
+        }),
       });
 
-      if (targetPrice && email) {
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to fetch preview");
+      }
+
+      const data = await response.json();
+      setPreviewData(data);
+
+      toast({
+        title: "Product preview loaded",
+        description: "You can now track this product",
+      });
+    } catch (error) {
+      toast({
+        title: "Error loading preview",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Could not fetch product data. Please try again.",
+        variant: "destructive",
+      });
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleTrackProduct = async (
+    url: string,
+    targetPrice?: number,
+    email?: string,
+  ) => {
+    if (!isAuthenticated) {
+      navigate("/login", { state: { from: "product-preview" } });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Call your /track endpoint
+      const response = await fetch("/api/track", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url,
+          targetPrice,
+          email,
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to track product");
+
+      const data = await response.json();
+
+      toast({
+        title: "Product tracked!",
+        description: "We'll monitor this product for you",
+      });
+
+      if (targetPrice) {
         toast({
-          title: "Price alert created",
-          description: `We'll notify you at ${email} when the price drops below $${targetPrice}.`,
+          title: "Price alert set",
+          description: `We'll notify you when the price drops below ${targetPrice}`,
         });
       }
     } catch (error) {
       toast({
         title: "Error tracking product",
-        description:
-          "There was an issue tracking this product. Please try again.",
+        description: "Could not track this product. Please try again.",
         variant: "destructive",
       });
-      console.error("Error tracking product:", error);
+      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleLoginRequest = () => {
+    navigate("/login", { state: { from: "product-preview" } });
   };
 
   const handleSetPriceAlert = (
@@ -168,96 +180,12 @@ const HomePage = () => {
   return (
     <Layout>
       <Hero />
-      <TrackProduct onSubmit={handleSubmit} isLoading={isLoading} />
-
-      {isSubmitted && (
-        <div id="results" className="container mx-auto px-4 py-8">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            <div className="mb-8">
-              <Tabs defaultValue="overview">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-                  <TabsList>
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="comparison">Comparison</TabsTrigger>
-                    <TabsTrigger value="analytics">Analytics</TabsTrigger>
-                  </TabsList>
-
-                  {/* ProductSearch here allows searching again within the results section */}
-                  <div className="flex justify-end">
-                    <ProductSearch
-                      onSubmit={handleSubmit}
-                      isLoading={isLoading}
-                    />
-                  </div>
-                </div>
-
-                <TabsContent value="overview">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1">
-                      {isLoading ? (
-                        <ProductDisplaySkeleton />
-                      ) : productData ? (
-                        <ProductDisplay
-                          product={productData}
-                          onSetPriceAlert={handleSetPriceAlert}
-                        />
-                      ) : null}
-                    </div>
-                    <div className="lg:col-span-2">
-                      {isLoading ? (
-                        <PriceChartSkeleton />
-                      ) : priceData.length > 0 ? (
-                        <ProductPriceChart
-                          priceData={priceData}
-                          currency={productData?.currency || "$"}
-                          targetPrice={349.99}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="comparison">
-                  {isLoading ? (
-                    <ProductComparisonSkeleton />
-                  ) : productData ? (
-                    <ProductComparison
-                      productName={productData.name}
-                      platforms={mockPlatforms}
-                    />
-                  ) : null}
-                </TabsContent>
-
-                <TabsContent value="analytics">
-                  <Card
-                    className={`transition-all duration-300 ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
-                  >
-                    <CardHeader>
-                      <CardTitle>Price Analytics</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="p-8 flex flex-col items-center justify-center text-center">
-                        <p className="text-lg">
-                          Advanced price analytics would appear here
-                        </p>
-                        <p className="text-gray-500 mt-2 max-w-lg">
-                          Including price fluctuation patterns, seasonal trends,
-                          and AI-powered price forecasting
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
-              </Tabs>
-            </div>
-          </motion.div>
-        </div>
-      )}
-
+      <TrackProduct
+        onSubmit={handlePreview}
+        isLoading={isLoading}
+        previewData={previewData}
+        onLoginRequest={handleLoginRequest}
+      />
       <div id="features">
         <Features />
       </div>

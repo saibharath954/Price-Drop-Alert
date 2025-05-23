@@ -2,7 +2,7 @@
 import asyncio
 from app.scraper.amazon import AmazonScraper
 
-url = "https://www.amazon.in/Geetanjali-Crafts-Handcrafted-Decoration-Pink/dp/B0C55JMDX7/ref=pd_subss_hxwPER_sspa_dk_detail_d_sccl_5_3/261-8528084-2435065?pd_rd_r=010d3123-75fb-42df-94b0-466d1e83c2e6&pd_rd_wg=zNiQL&pd_rd_w=5G4Vc&pd_rd_i=B0C55JMDX7&psc=1&sp_csd=d2lkZ2V0TmFtZT1zcF9kZXRhaWxfdGhlbWF0aWM="
+url = "https://www.amazon.in/dp/B09PRK7ZSD/ref=vp_d_fuw_pd?_encoding=UTF8&pf_rd_p=057b309c-16d3-4acf-8aa9-4d6460133982&pf_rd_r=RA3YWQXCNRPFZ7TA0XYY&pd_rd_wg=u7XiN&pd_rd_i=B09PRK7ZSD&pd_rd_w=rfXil&content-id=amzn1.sym.057b309c-16d3-4acf-8aa9-4d6460133982&pd_rd_r=186f6b71-f0ab-4471-a138-dd486c754e0e&th=1"
 
 async def main():
     scraper = AmazonScraper()
