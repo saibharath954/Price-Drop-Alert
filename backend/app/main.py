@@ -139,7 +139,7 @@ async def scrape_preview(request: ScrapeRequest):
             name=product_data["name"],
             image=product_data["image"],
             currentPrice=product_data["price"],
-            currency=product_data.get("currency", "Rs"), # Default if not scraped
+            currency=product_data.get("currency", "Rs "), # Default if not scraped
             url=request.url
         )
     except Exception as e:

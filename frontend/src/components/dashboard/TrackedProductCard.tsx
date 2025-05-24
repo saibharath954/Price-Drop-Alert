@@ -63,7 +63,6 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
   return (
     <Card
       className={`overflow-hidden transition-all hover:shadow-md ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
-      onClick={() => navigate(`/product/${product.id}`)}
     >
       <div className="relative">
         <Link to={`/product/${product.id}`}>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { Layout } from "@/components/layout/Layout";
 import { ProductDisplay } from "@/components/product/ProductDisplay";
@@ -8,118 +9,148 @@ import { ProductComparison } from "@/components/product/ProductComparison";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { mockPriceData, mockProductData } from "@/lib/mockData";
 import { useTheme } from "@/hooks/useTheme";
+import { auth } from "@/lib/firebase";
+import {
+  getProductDetails,
+  getPriceHistory,
+  getPlatformComparisons,
+  setPriceAlert,
+  removePriceAlert,
+} from "@/services/productService";
 
-const mockPlatforms = [
-  {
-    platform: "Amazon",
-    currentPrice: mockProductData.currentPrice,
-    currency: "$",
-    url: mockProductData.url,
-    available: true,
-    priceHistory: mockPriceData,
-    logo: "https://via.placeholder.com/100x100.png?text=Amazon",
-    shipping: 0,
-    trend: "down" as const,
-    trendAmount: 100,
-  },
-  {
-    platform: "Walmart",
-    currentPrice: mockProductData.currentPrice + 15,
-    currency: "$",
-    url: "https://walmart.com",
-    available: true,
-    priceHistory: mockPriceData.map((item) => ({
-      ...item,
-      price: item.price + 15 + Math.random() * 5,
-    })),
-    logo: "https://via.placeholder.com/100x100.png?text=Walmart",
-    shipping: 5.99,
-    discount: {
-      originalPrice: mockProductData.currentPrice + 50,
-      percentage: 20,
-    },
-    trend: "stable" as const,
-  },
-  {
-    platform: "BestBuy",
-    currentPrice: mockProductData.currentPrice - 10,
-    currency: "$",
-    url: "https://bestbuy.com",
-    available: false,
-    priceHistory: mockPriceData.map((item) => ({
-      ...item,
-      price: item.price - 10 - Math.random() * 5,
-    })),
-    logo: "https://via.placeholder.com/100x100.png?text=BestBuy",
-    shipping: 0,
-    trend: "up" as const,
-    trendAmount: 5,
-  },
-];
+import { Product, PlatformPriceData, PriceDataPoint } from "@/types";
 
 const ProductDetail = () => {
-  const { productId } = useParams();
+  const { productId } = useParams<{ productId: string }>();
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [productData, setProductData] = useState<any>(null);
-  const [priceData, setPriceData] = useState<any[]>([]);
-  const [comparisonData, setComparisonData] = useState<any>(null);
+  const [productData, setProductData] = useState<Product | null>(null);
+  const [priceData, setPriceData] = useState<PriceDataPoint[]>([]);
+  const [comparisonData, setComparisonData] = useState<PlatformPriceData[]>([]);
   const { theme } = useTheme();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Simulate API call to fetch product and price data
+    if (!productId || !user?.uid) return;
+
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        await new Promise((resolve) => setTimeout(resolve, 1500));
+        const [product, history, comparisons] = await Promise.all([
+          getProductDetails(productId, user.uid),
+          getPriceHistory(productId),
+          getPlatformComparisons(productId),
+        ]);
 
-        // Add a rating and brand to the mock data
-        const enhancedProductData = {
-          ...mockProductData,
-          rating: 4.7,
-          brand: "Samsung",
-        };
+        if (!product) {
+          throw new Error("Product not found or not tracked by user");
+        }
 
-        setProductData(enhancedProductData);
-        setPriceData(mockPriceData);
-        setComparisonData(mockPlatforms);
+        setProductData(product);
+        setPriceData(history);
+        setComparisonData(comparisons);
 
         toast({
           title: "Product data loaded",
           description: "Successfully fetched latest price data.",
         });
       } catch (error) {
+        console.error("Error loading product:", error);
         toast({
           title: "Error loading product",
           description:
-            "There was an issue loading this product. Please try again.",
+            error instanceof Error
+              ? error.message
+              : "There was an issue loading this product.",
           variant: "destructive",
         });
-        console.error("Error loading product:", error);
+        setProductData(null);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [productId, toast]);
+  }, [productId, user?.uid]);
 
-  const handleSetPriceAlert = (
+  const handleSetPriceAlert = async (
     productId: string,
     targetPrice: number,
     email: string,
   ) => {
-    toast({
-      title: "Price alert created",
-      description: `We'll notify you at ${email} when the price drops below ${targetPrice}.`,
-    });
+    if (!user?.uid) {
+      toast({
+        title: "Authentication required",
+        description: "You need to be logged in to set price alerts.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      await setPriceAlert(productId, user.uid, targetPrice, email);
+      toast({
+        title: "Price alert created",
+        description: `We'll notify you at ${email} when the price drops below ${targetPrice}.`,
+      });
+
+      setProductData((prev) =>
+        prev
+          ? {
+              ...prev,
+              alertEnabled: true,
+              targetPrice,
+            }
+          : null,
+      );
+    } catch (error) {
+      console.error("Error setting price alert:", error);
+      toast({
+        title: "Failed to set alert",
+        description: "There was an error creating your price alert.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleRemoveAlert = async (productId: string) => {
+    if (!user?.uid) return;
+
+    try {
+      await removePriceAlert(productId, user.uid);
+      toast({
+        title: "Price alert removed",
+        description:
+          "You will no longer receive notifications for this product.",
+      });
+
+      setProductData((prev) =>
+        prev
+          ? {
+              ...prev,
+              alertEnabled: false,
+              targetPrice: null,
+            }
+          : null,
+      );
+    } catch (error) {
+      console.error("Error removing price alert:", error);
+      toast({
+        title: "Failed to remove alert",
+        description: "There was an error removing your price alert.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const formatChartData = (history: PriceDataPoint[]) => {
+    return history;
   };
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8  pt-24 overflow-hidden">
         <h1
           className={`text-3xl font-bold mb-8 ${theme === "dark" ? "text-white" : "text-gray-900"}`}
         >
@@ -142,22 +173,24 @@ const ProductDetail = () => {
                 <ProductDisplay
                   product={productData}
                   onSetPriceAlert={handleSetPriceAlert}
+                  onRemoveAlert={handleRemoveAlert}
                 />
               </div>
               <div className="lg:col-span-2">
                 <ProductPriceChart
-                  priceData={priceData}
-                  currency={productData.currency}
+                  priceData={formatChartData(priceData)}
+                  currency={productData.currency ?? "Rs"}
                 />
               </div>
             </div>
-
-            <div className="pt-6">
-              <ProductComparison
-                productName={productData.name}
-                platforms={comparisonData}
-              />
-            </div>
+            {comparisonData.length > 0 && (
+              <div className="pt-6">
+                <ProductComparison
+                  productName={productData.name}
+                  platforms={comparisonData}
+                />
+              </div>
+            )}
 
             <div className="pt-4">
               <Card
@@ -310,12 +343,34 @@ const ProductDetail = () => {
 
                     <TabsContent value="price-alerts" className="py-4">
                       <div className="text-center p-8">
-                        <p className="text-lg mb-2">
-                          No active price alerts for this product
-                        </p>
-                        <p className="text-gray-500 mb-6">
-                          Set an alert and we'll notify you when the price drops
-                        </p>
+                        {productData.alertEnabled ? (
+                          <>
+                            <p className="text-lg mb-2">
+                              Active price alert for {productData.name}
+                            </p>
+                            <p className="text-gray-500 mb-6">
+                              You'll be notified at {user?.email} when the price
+                              drops below {productData.currency}
+                              {productData.targetPrice}
+                            </p>
+                            <button
+                              onClick={() => handleRemoveAlert(productId!)}
+                              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+                            >
+                              Remove Alert
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="text-lg mb-2">
+                              No active price alerts for this product
+                            </p>
+                            <p className="text-gray-500 mb-6">
+                              Set an alert and we'll notify you when the price
+                              drops
+                            </p>
+                          </>
+                        )}
                       </div>
                     </TabsContent>
                   </Tabs>
@@ -328,7 +383,7 @@ const ProductDetail = () => {
             <h2 className="text-2xl font-bold mb-2">Product Not Found</h2>
             <p className="text-gray-500 mb-6">
               We couldn't find the product you're looking for. It may have been
-              removed or the URL is incorrect.
+              removed or you need to track it first.
             </p>
           </div>
         )}

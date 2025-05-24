@@ -39,7 +39,7 @@ import { useAuth } from "@/hooks/useAuth";
 interface PriceChange {
   amount: number;
   percentage: number;
-  direction: "up" | "down" | "same";
+  direction: "up" | "down" | "same" | "stable";
 }
 
 interface Product {
@@ -67,6 +67,7 @@ interface ProductDisplayProps {
   ) => void;
   isPreview?: boolean;
   onLoginRequest?: () => void;
+  onRemoveAlert: (productId: string) => void;
 }
 
 export const ProductDisplay = ({
@@ -74,6 +75,7 @@ export const ProductDisplay = ({
   onSetPriceAlert,
   isPreview = false,
   onLoginRequest,
+  onRemoveAlert,
 }: ProductDisplayProps) => {
   const { theme } = useTheme();
   const { isAuthenticated } = useAuth();
