@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useTheme } from "@/hooks/useTheme";
 import { Eye, Trash2, Bell, BellOff, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 interface TrackedProductCardProps {
   product: {
@@ -31,7 +31,8 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
   product,
   onToggleAlert,
   onRemove,
-}) => {
+}: TrackedProductCardProps) => {
+  const navigate = useNavigate();
   const { theme } = useTheme();
   const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,6 +63,7 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
   return (
     <Card
       className={`overflow-hidden transition-all hover:shadow-md ${theme === "dark" ? "bg-gray-800 border-gray-700" : "bg-white"}`}
+      onClick={() => navigate(`/product/${product.id}`)}
     >
       <div className="relative">
         <Link to={`/product/${product.id}`}>

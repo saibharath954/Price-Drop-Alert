@@ -95,7 +95,7 @@ const Dashboard = () => {
       percentage,
       direction,
     };
-  };    
+  };
 
   const fetchTrackedProducts = async () => {
     if (!user || !token) {
@@ -111,7 +111,7 @@ const Dashboard = () => {
         },
       });
 
-       const products = (response.data ?? []).map((product: any) => ({
+      const products = (response.data ?? []).map((product: any) => ({
         ...product,
         priceChange: calculatePriceChange(product.priceHistory || []),
       }));
