@@ -111,6 +111,17 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+# Initialize the scheduler when the app starts
+@app.on_event("startup")
+async def startup_event():
+    try:
+        from .scheduler import init_scheduler
+        app.state.scheduler = init_scheduler()
+        logger.info("Price alert scheduler initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize scheduler: {e}")
+        raise
+    
 # --- API Endpoints ---
 
 @app.get("/health", status_code=status.HTTP_200_OK)
