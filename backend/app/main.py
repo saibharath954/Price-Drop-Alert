@@ -115,7 +115,7 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(secur
 @app.on_event("startup")
 async def startup_event():
     try:
-        from .scheduler import init_scheduler
+        from scheduler import init_scheduler
         app.state.scheduler = init_scheduler()
         logger.info("Price alert scheduler initialized")
     except Exception as e:
@@ -332,3 +332,7 @@ async def get_price_history(product_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch price history: {str(e)}"
         )
+    
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("app.main:app", host="0.0.0.0", port=8000)
