@@ -5,11 +5,12 @@ from firebase_admin import credentials, firestore, auth
 from firebase_admin.exceptions import FirebaseError
 from datetime import datetime
 import os
+import json 
 from typing import Dict, Any, List, Optional, Union
 from dotenv import load_dotenv
 import logging
 from google.cloud.firestore_v1 import DocumentSnapshot
-from google.cloud.firestore_v1.field_path import FieldPath # Import FieldPath directly
+from google.cloud.firestore_v1.field_path import FieldPath
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -21,18 +22,20 @@ class FirebaseClient:
     def __init__(self):
         """Initialize Firebase client with proper error handling."""
         try:
-            cred_path = os.getenv("FIREBASE_CREDENTIALS_PATH")
-            if not cred_path:
-                raise ValueError("FIREBASE_CREDENTIALS_PATH environment variable not set.")
+            # Get the JSON config from environment variable
+            firebase_config = os.getenv("FIREBASE_CONFIG")
+            
+            if not firebase_config:
+                raise ValueError("FIREBASE_CONFIG environment variable not set")
 
-            # Ensure the path is absolute and accessible
-            if not os.path.isabs(cred_path):
-                cred_path = os.path.abspath(cred_path)
+            try:
+                # Parse the JSON string into a dictionary
+                cred_dict = json.loads(firebase_config)
+            except json.JSONDecodeError as e:
+                raise ValueError(f"Invalid JSON in FIREBASE_CONFIG: {e}")
 
-            if not os.path.exists(cred_path):
-                raise FileNotFoundError(f"Firebase credentials file not found at: {cred_path}")
-
-            cred = credentials.Certificate(cred_path)
+            # Initialize Firebase with the dictionary
+            cred = credentials.Certificate(cred_dict)
             if not firebase_admin._apps:  # Avoid re-initializing if already initialized
                 firebase_admin.initialize_app(cred)
 
@@ -40,6 +43,7 @@ class FirebaseClient:
             logger.info("Firebase initialized successfully.")
         except Exception as e:
             logger.error(f"Firebase initialization failed: {e}")
+            logger.error(traceback.format_exc())  # Log full traceback
             raise
 
     def verify_token(self, token: str) -> dict:
