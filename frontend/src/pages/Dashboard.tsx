@@ -32,6 +32,7 @@ interface TrackedProduct {
   lastUpdated: string;
   priceChange: PriceChange;
 }
+const BASE_URL = import.meta.env.VITE_API_URL;
 
 const Dashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +106,7 @@ const Dashboard = () => {
 
     try {
       setIsLoading(true);
-      const response = await axios.get("/api/user/products", {
+      const response = await axios.get(`${BASE_URL}/api/user/products`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -145,7 +146,7 @@ const Dashboard = () => {
       const newAlertState = !product.alertEnabled;
 
       await axios.post(
-        "/api/product/alert",
+        `${BASE_URL}/api/product/alert`,
         {
           productId,
           enable: newAlertState,
@@ -179,7 +180,7 @@ const Dashboard = () => {
     if (!user || !token) return;
 
     try {
-      await axios.delete(`/api/product/${productId}`, {
+      await axios.delete(`${BASE_URL}/api/product/${productId}`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -218,7 +219,7 @@ const Dashboard = () => {
       if (user && token) {
         // Authenticated flow - track the product
         const response = await axios.post(
-          "/api/track",
+          `${BASE_URL}/api/track`,
           {
             url: newProductUrl,
             userId: user.uid,
@@ -232,7 +233,7 @@ const Dashboard = () => {
 
         // Fetch the newly added product details
         const productResponse = await axios.get(
-          `/api/product/${response.data.productId}`,
+          `${BASE_URL}/api/product/${response.data.productId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -253,7 +254,7 @@ const Dashboard = () => {
         ]);
       } else {
         // Unauthenticated flow - just show a preview
-        const response = await axios.post("/api/scrape-preview", {
+        const response = await axios.post(`${BASE_URL}/api/scrape-preview`, {
           url: newProductUrl,
         });
 

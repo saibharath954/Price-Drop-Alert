@@ -33,6 +33,7 @@ import {
 // UI components from shadcn/ui
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+const BASE_URL = import.meta.env.VITE_API_URL; 
 
 const HomePage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -71,7 +72,7 @@ const HomePage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/scrape-preview", {
+      const response = await fetch(`${BASE_URL}/api/scrape-preview`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -123,7 +124,7 @@ const HomePage = () => {
 
     try {
       // Call your /track endpoint
-      const response = await fetch("/api/track", {
+      const response = await fetch(`${BASE_URL}/api/track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
