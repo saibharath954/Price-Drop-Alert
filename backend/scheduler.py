@@ -1,4 +1,4 @@
-# backend/app/scheduler.py
+# backend/scheduler.py
 import logging
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
@@ -8,8 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import asyncio
 from fastapi import Depends
-from scraper.amazon import AmazonScraper
-from firebase.client import FirebaseClient
+from app.scraper.amazon import AmazonScraper
+from app.firebase.client import FirebaseClient
 from dotenv import load_dotenv
 import traceback
 from email.mime.multipart import MIMEMultipart
