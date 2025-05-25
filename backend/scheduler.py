@@ -228,7 +228,14 @@ class AlertScheduler:
             
             new_price = scraped_data["price"] # Already ensured to be float
             
-            price_change = self.firebase._calculate_price_change(current_data, scraped_data)
+            price_change_value = self.firebase._calculate_price_change(current_data, scraped_data) # This usually gives percentage
+
+            amount_change = new_price - current_data.get("currentPrice", 0)
+            direction_value = "same"
+            if amount_change > 0:
+                direction_value = "up"
+            elif amount_change < 0:
+                direction_value = "down"
             
             update_data = {
                 "name": scraped_data.get("name", current_data.get("name")),
@@ -237,7 +244,11 @@ class AlertScheduler:
                 "currency": scraped_data.get("currency", current_data.get("currency", "Rs")),
                 "url": scraped_data.get("url", current_data.get("url")),
                 "lastUpdated": datetime.now(timezone.utc), # Store UTC time
-                "priceChange": price_change
+                "priceChange": {
+                    "amount": amount_change,
+                    "percentage": price_change_value,
+                    "direction": direction_value
+                },
             }
             
             history = current_data.get("priceHistory", [])
