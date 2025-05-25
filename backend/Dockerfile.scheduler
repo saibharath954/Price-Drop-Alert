@@ -1,5 +1,6 @@
-# Use an official Python runtime as a parent image
-FROM python:3.11-slim
+# Use an official Python runtime as a parent image.
+# Align with your main.py's Python version, e.g., 3.11-slim if you're using that.
+FROM python:3.11-slim 
 
 # Set the working directory inside the container
 WORKDIR /app
@@ -10,9 +11,10 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy only the scheduler script (and any necessary files for it)
-COPY scheduler.py .
+# Copy the entire backend directory into the container's /app directory.
+# This ensures that both 'scheduler.py' and the 'app/' directory (with its contents)
+# are present in the /app directory inside the container.
+COPY . .
 
 # Command to run the Python scheduler script
 CMD ["python", "scheduler.py"]
-# Note: This Dockerfile is specifically for the scheduler script.
