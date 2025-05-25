@@ -8,8 +8,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import asyncio
 from fastapi import Depends
-from .scraper.amazon import AmazonScraper
-from .firebase.client import FirebaseClient
+from scraper.amazon import AmazonScraper
+from firebase.client import FirebaseClient
 from dotenv import load_dotenv
 import traceback
 from email.mime.multipart import MIMEMultipart
