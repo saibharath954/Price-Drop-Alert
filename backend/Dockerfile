@@ -5,7 +5,6 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend/serviceAccountKey.json ./serviceAccountKey.json
 COPY app/ ./app
 COPY scheduler.py .
 
