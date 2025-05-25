@@ -1,11 +1,10 @@
-# backend/app/firebase/client.py
 import traceback
 import firebase_admin
 from firebase_admin import credentials, firestore, auth
 from firebase_admin.exceptions import FirebaseError
 from datetime import datetime
 import os
-import json 
+import json
 from typing import Dict, Any, List, Optional, Union
 from dotenv import load_dotenv
 import logging
@@ -20,31 +19,43 @@ load_dotenv()
 
 class FirebaseClient:
     def __init__(self):
-        """Initialize Firebase client with proper error handling."""
+        """Initialize Firebase client with proper error handling, supporting both
+        environment variable (production) and local file (development).
+        """
         try:
-            # Get the JSON config from environment variable
-            firebase_config = os.getenv("FIREBASE_CONFIG")
-            
-            if not firebase_config:
-                raise ValueError("FIREBASE_CONFIG environment variable not set")
+            cred = None
+            # Attempt to get the JSON config from environment variable (for production)
+            firebase_config_env = os.getenv("FIREBASE_CONFIG")
 
-            try:
-                # Parse the JSON string into a dictionary
-                cred_dict = json.loads(firebase_config)
-            except json.JSONDecodeError as e:
-                raise ValueError(f"Invalid JSON in FIREBASE_CONFIG: {e}")
+            if firebase_config_env:
+                logger.info("Initializing Firebase using FIREBASE_CONFIG environment variable.")
+                try:
+                    # Parse the JSON string into a dictionary
+                    cred_dict = json.loads(firebase_config_env)
+                    cred = credentials.Certificate(cred_dict)
+                except json.JSONDecodeError as e:
+                    raise ValueError(f"Invalid JSON in FIREBASE_CONFIG environment variable: {e}")
+            else:
+                # Fallback to local service account key file (for development)
+                service_account_key_path = os.path.join(os.path.dirname(__file__), '../../serviceAccountKey.json')
+                if os.path.exists(service_account_key_path):
+                    logger.info(f"Initializing Firebase using local service account key: {service_account_key_path}")
+                    cred = credentials.Certificate(service_account_key_path)
+                else:
+                    raise FileNotFoundError(f"Neither FIREBASE_CONFIG environment variable nor local service account key found at {service_account_key_path}")
 
-            # Initialize Firebase with the dictionary
-            cred = credentials.Certificate(cred_dict)
-            if not firebase_admin._apps:  # Avoid re-initializing if already initialized
-                firebase_admin.initialize_app(cred)
+            if cred:
+                if not firebase_admin._apps:  # Avoid re-initializing if already initialized
+                    firebase_admin.initialize_app(cred)
+                self.db = firestore.client()
+                logger.info("Firebase initialized successfully.")
+            else:
+                raise ValueError("Firebase credentials could not be established.")
 
-            self.db = firestore.client()
-            logger.info("Firebase initialized successfully.")
         except Exception as e:
-            logger.error(f"Firebase initialization failed: {e}")
-            logger.error(traceback.format_exc())  # Log full traceback
-            raise
+            logger.critical(f"Firebase initialization failed: {e}")
+            logger.critical(traceback.format_exc())  # Log full traceback
+            raise # Re-raise the exception to stop the application if Firebase init fails
 
     def verify_token(self, token: str) -> dict:
         """Verify Firebase ID token with comprehensive error handling."""

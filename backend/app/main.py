@@ -27,8 +27,8 @@ security = HTTPBearer()
 # CORS configuration - Ensure this is correctly set for your frontend deployment
 origins = [
     "http://localhost:3000", # For local development
-    "https://your-production-domain.com", # Replace with your actual production domain
-    "https://price-drop-alert-seven.vercel.app" # Your Vercel deployment
+    "https://price-drop-alert-seven.vercel.app",  # Your Vercel frontend
+    "https://price-drop-alert-seven.vercel.app/",  # Variant with trailing slash
 ]
 
 app.add_middleware(
@@ -333,6 +333,3 @@ async def get_price_history(product_id: str):
             detail=f"Failed to fetch price history: {str(e)}"
         )
     
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("app.main:app", host="0.0.0.0", port=8000)
