@@ -72,7 +72,7 @@ const HomePage = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${BASE_URL}/api/scrape-preview`, {
+      const response = await fetch(`${BASE_URL}/scrape-preview`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +124,7 @@ const HomePage = () => {
 
     try {
       // Call your /track endpoint
-      const response = await fetch(`${BASE_URL}/api/track`, {
+      const response = await fetch(`${BASE_URL}/track`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
