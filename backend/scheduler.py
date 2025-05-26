@@ -1,21 +1,20 @@
 # backend/scheduler.py
 import logging
 from logging.handlers import RotatingFileHandler
-from datetime import datetime, timezone # Import timezone for UTC
+from datetime import datetime, timezone
 from typing import Dict, Any, List
 import os
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 import asyncio
-import firebase_admin # Ensure this is imported for Firestore operations
+import firebase_admin
 from firebase_admin import credentials, firestore
 from app.scraper.amazon import AmazonScraper
 from dotenv import load_dotenv
 import traceback
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import smtplib
-import json # Import json to parse the environment variable
+import json
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail, HtmlContent
 
 # Load environment variables
 load_dotenv()
@@ -68,18 +67,14 @@ class AlertScheduler:
     def __init__(self):
         """Initialize the scheduler with logging and services."""
         self._setup_logging()
-        self.logger = logging.getLogger('price_alert_scheduler') # Use the specific logger name
+        self.logger = logging.getLogger('price_alert_scheduler')
         self.scheduler = BackgroundScheduler()
-        # Initialize FirebaseClient here. It will handle the SDK initialization.
-        self.firebase = FirebaseClient() 
-        self.scraper = AmazonScraper() # Ensure AmazonScraper is robust
-        self.smtp_config = {
-            'host': os.getenv('SMTP_HOST'),
-            'port': int(os.getenv('SMTP_PORT', 587)),
-            'username': os.getenv('SMTP_USERNAME'),
-            'password': os.getenv('SMTP_PASSWORD'),
-            'from_email': os.getenv('EMAIL_FROM', 'alerts@pricedropalert.com')
-        }
+        self.firebase = FirebaseClient()
+        self.scraper = AmazonScraper()
+        
+        # SendGrid 
+        self.sendgrid_client = SendGridAPIClient(os.getenv('SENDGRID_API_KEY'))
+        self.from_email = os.getenv('EMAIL_FROM', 'alerts@pricedropalert.com')
         
     def _setup_logging(self):
         """Configure rotating file logging for the scheduler."""
@@ -317,18 +312,13 @@ class AlertScheduler:
             self.logger.error(f"Failed to check alerts for product {product_id}: {traceback.format_exc()}")
 
     def _send_alert_email(self, alert_data: Dict[str, Any], product_data: Dict[str, Any], current_price: float):
-        """Synchronously send an email notification for a triggered price alert."""
+        """Send an email notification using SendGrid API."""
         try:
             product_id = alert_data["productId"]
             user_email = alert_data["email"]
             target_price = alert_data["targetPrice"]
             
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = f"Price Alert: {product_data.get('name', 'Your tracked product')}"
-            msg['From'] = self.smtp_config['from_email']
-            msg['To'] = user_email
-            
-            html = f"""
+            html_content = f"""
             <html>
             <body>
                 <h2>Price Drop Alert!</h2>
@@ -348,14 +338,15 @@ class AlertScheduler:
             </html>
             """
             
-            msg.attach(MIMEText(html, 'html'))
+            message = Mail(
+                from_email=self.from_email,
+                to_emails=user_email,
+                subject=f"Price Alert: {product_data.get('name', 'Your tracked product')}",
+                html_content=HtmlContent(html_content)
+            )
             
-            with smtplib.SMTP(self.smtp_config['host'], self.smtp_config['port']) as server:
-                server.starttls()
-                server.login(self.smtp_config['username'], self.smtp_config['password'])
-                server.send_message(msg)
-            
-            self.logger.info(f"Alert email sent to {user_email} for product {product_id}.")
+            response = self.sendgrid_client.send(message)
+            self.logger.info(f"Alert email sent to {user_email} for product {product_id}. Status code: {response.status_code}")
             
         except Exception as e:
             self.logger.error(f"Failed to send alert email to {user_email} for product {product_id}: {traceback.format_exc()}")
