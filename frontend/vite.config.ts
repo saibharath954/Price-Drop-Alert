@@ -16,7 +16,9 @@ export default defineConfig(({ mode }) => ({
       },
     },
   },
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), mode === "development" && componentTagger()].filter(
+    Boolean,
+  ),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -27,7 +29,7 @@ export default defineConfig(({ mode }) => ({
     "process.env.VITE_API_BASE_URL": JSON.stringify(
       mode === "production"
         ? "https://price-drop-alert-production.up.railway.app"
-        : "http://localhost:8000"
+        : "http://localhost:8000",
     ),
   },
 }));

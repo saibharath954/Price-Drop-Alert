@@ -65,8 +65,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({
               Average Price
             </p>
             <h4 className="text-2xl font-bold">
-              {currency}
-              {averagePrice.toFixed(2)}
+              {`${currency} ${averagePrice.toFixed(2)}`}
             </h4>
           </div>
         </CardContent>

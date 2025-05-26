@@ -363,7 +363,7 @@ const Dashboard = () => {
               <DashboardStats
                 totalTracked={totalTracked}
                 averagePrice={averagePrice}
-                currency={trackedProducts[0]?.currency || "$"}
+                currency={trackedProducts[0]?.currency || "Rs "}
                 averageSavings={averageSavings}
                 lowestPrice={lowestPrice}
               />

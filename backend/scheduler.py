@@ -336,9 +336,8 @@ class AlertScheduler:
                                     </td>
                                     <td style="vertical-align: top;">
                                         <h3 style="color: #007bff; margin-top: 0; margin-bottom: 10px;">{product_data.get('name', '')}</h3>
-                                        <p style="margin: 5px 0;"><strong>Current Price:</strong> <span style="color: #28a745; font-size: 1.1em; font-weight: bold;">{product_data.get('currency', 'Rs ')}{current_price}</span></p>
-                                        <p style="margin: 5px 0; text-decoration: line-through; color: #777;"><strong>Previous Price:</strong> {product_data.get('currency', 'Rs ')}{product_data.get('previous_price', 'N/A')}</p>
-                                        <p style="margin: 5px 0;"><strong>Your Target Price:</strong> {product_data.get('currency', 'Rs ')}{target_price}</p>
+                                        <p style="margin: 5px 0;"><strong>Current Price:</strong> <span style="color: #28a745; font-size: 1.1em; font-weight: bold;">{product_data.get('currency ', 'Rs ')}{current_price}</span></p>
+                                        <p style="margin: 5px 0;"><strong>Your Target Price:</strong> {product_data.get('currency ', 'Rs ')}{target_price}</p>
                                         <p style="margin-top: 20px;">
                                             <a href="{product_data.get('url', '')}" style="background-color: #007bff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Claim Your Deal Now!</a>
                                         </p>

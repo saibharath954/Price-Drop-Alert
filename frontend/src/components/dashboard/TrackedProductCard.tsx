@@ -94,13 +94,14 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
         )}
       </div>
       <CardContent className="p-4">
-        <h3 className="text-lg font-semibold line-clamp-2 mb-1">
-          {product.name}
-        </h3>
+        <Link to={`/product/${product.id}`}>
+          <h3 className="text-lg font-semibold line-clamp-2 mb-1">
+            {product.name}
+          </h3>
+        </Link>
         <div className="flex justify-between items-center mb-2">
           <div className="font-bold text-xl">
-            {product.currency}
-            {product.currentPrice.toFixed(2)}
+            {`${product.currency} ${product.currentPrice.toFixed(2)}`}
           </div>
           <div
             className={`text-xs ${theme === "dark" ? "text-gray-400" : "text-gray-500"}`}
@@ -114,8 +115,7 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
           >
             Alert when below:{" "}
             <span className="font-medium">
-              {product.currency}
-              {product.targetPrice}
+              {`${product.currency} ${product.targetPrice}`}
             </span>
           </div>
         )}
