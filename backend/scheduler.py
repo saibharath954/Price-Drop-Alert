@@ -321,19 +321,40 @@ class AlertScheduler:
             html_content = f"""
             <html>
             <body>
-                <h2>Price Drop Alert!</h2>
-                <p>The product you're tracking has reached your target price.</p>
-                
-                <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0;">
-                    <img src="{product_data.get('image', '')}" alt="{product_data.get('name', '')}" width="200">
-                    <h3>{product_data.get('name', '')}</h3>
-                    <p><strong>Current Price:</strong> {product_data.get('currency', 'Rs')}{current_price}</p>
-                    <p><strong>Your Target Price:</strong> {product_data.get('currency', 'Rs')}{target_price}</p>
-                    <p><a href="{product_data.get('url', '')}" style="background-color: #4CAF50; color: white; padding: 10px 15px; text-decoration: none; border-radius: 4px;">Buy Now</a></p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;">
+                    <div style="background-color: #f7f7f7; padding: 20px; text-align: center; border-bottom: 1px solid #e0e0e0;">
+                        <h2 style="color: #333; margin: 0;">🎉 Price Dropped! Time to Grab Your Deal! 🎉</h2>
+                        <p style="color: #666; margin-top: 10px;">The product you've been eyeing just hit your target price!</p>
+                    </div>
+                    
+                    <div style="padding: 20px;">
+                        <div style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px;">
+                            <table width="100%" cellspacing="0" cellpadding="0">
+                                <tr>
+                                    <td style="width: 150px; vertical-align: top; padding-right: 15px;">
+                                        <img src="{product_data.get('image', '')}" alt="{product_data.get('name', '')}" width="150" style="max-width: 100%; height: auto; border-radius: 4px;">
+                                    </td>
+                                    <td style="vertical-align: top;">
+                                        <h3 style="color: #007bff; margin-top: 0; margin-bottom: 10px;">{product_data.get('name', '')}</h3>
+                                        <p style="margin: 5px 0;"><strong>Current Price:</strong> <span style="color: #28a745; font-size: 1.1em; font-weight: bold;">{product_data.get('currency', 'Rs ')}{current_price}</span></p>
+                                        <p style="margin: 5px 0; text-decoration: line-through; color: #777;"><strong>Previous Price:</strong> {product_data.get('currency', 'Rs ')}{product_data.get('previous_price', 'N/A')}</p>
+                                        <p style="margin: 5px 0;"><strong>Your Target Price:</strong> {product_data.get('currency', 'Rs ')}{target_price}</p>
+                                        <p style="margin-top: 20px;">
+                                            <a href="{product_data.get('url', '')}" style="background-color: #007bff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Claim Your Deal Now!</a>
+                                        </p>
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        
+                        <p style="text-align: center; margin-top: 30px; color: #666;">Don't miss out on this fantastic offer!</p>
+                    </div>
+
+                    <div style="background-color: #f7f7f7; padding: 15px; text-align: center; border-top: 1px solid #e0e0e0;">
+                        <p style="margin: 0; color: #888;">Keep tracking your favorites at <a href="https://price-drop-alert-seven.vercel.app" style="color: #007bff; text-decoration: none;">PricePulse</a></p>
+                        <p style="margin-top: 10px; font-size: 0.8em; color: #aaa;">This is an automated message. Please do not reply directly to this email.</p>
+                    </div>
                 </div>
-                
-                <p>You can view all your tracked products at <a href="https://price-drop-alert-seven.vercel.app">Price Drop Alert</a></p>
-                <p><small>This is an automated message. Please do not reply directly to this email.</small></p>
             </body>
             </html>
             """
