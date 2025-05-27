@@ -63,3 +63,9 @@ export interface AlertData {
   isActive: boolean;
   createdAt: Date;
 }
+
+export interface ComparisonDocumentData {
+  primaryProductId: string;
+  lastCompared: Date; // Or Date, depending on how you handle timestamps
+  similarProducts: PlatformPriceData[]; // This is the array of similar products
+}

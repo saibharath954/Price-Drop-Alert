@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { useTheme } from "@/hooks/useTheme";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import {
   LineChart,
@@ -18,6 +19,17 @@ import {
   Area,
 } from "recharts";
 import { ExternalLink, TrendingDown, TrendingUp, Minus } from "lucide-react";
+
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import axios from "axios";
+import { useUser } from "@/contexts/UserContext";
 
 interface PlatformPriceData {
   platform: string;
@@ -36,31 +48,57 @@ interface PlatformPriceData {
   trendAmount?: number;
 }
 
+interface SimilarProductData {
+  productId: string; // Unique ID for the similar product
+  name: string;
+  platform: string;
+  url: string;
+  image: string;
+  currentPrice: number;
+  currency: string;
+}
+
+interface FirestoreComparisonData {
+  primaryProductId: string;
+  lastCompared: Timestamp;
+  similarProducts: SimilarProductData[];
+}
+
 interface ProductComparisonProps {
+  productId: string;
   productName: string;
   platforms: PlatformPriceData[];
 }
 
 export const ProductComparison = ({
+  productId,
   productName,
   platforms,
 }: ProductComparisonProps) => {
   const { theme } = useTheme();
+  const { toast } = useToast();
+  const { user, token } = useUser();
   const [activePlatform, setActivePlatform] = useState<string>(
     platforms[0]?.platform || "",
   );
+  // State for the *similar* products
+  const [similarProducts, setSimilarProducts] = useState<SimilarProductData[]>(
+    [],
+  );
+  const [loadingComparisons, setLoadingComparisons] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sort platforms by price (lowest first)
+  // Sort platforms by price (lowest first) for the *main* product comparison tab
   const sortedPlatforms = [...platforms].sort((a, b) => {
     const totalA = a.currentPrice + (a.shipping || 0);
     const totalB = b.currentPrice + (b.shipping || 0);
     return totalA - totalB;
   });
 
-  // Find cheapest platform
+  // Find cheapest platform for the *main* product comparison tab
   const cheapestPlatform = sortedPlatforms[0];
 
-  const formatPrice = (price: number, currency: string = "$") => {
+  const formatPrice = (price: number, currency: string = "Rs ") => {
     return `${currency}${price.toFixed(2)}`;
   };
 
@@ -108,7 +146,7 @@ export const ProductComparison = ({
 
   const savings = calculateSavings();
 
-  // Custom tooltip for price charts
+  // Custom tooltip for price charts (for main product history)
   const renderCustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0];
@@ -130,6 +168,55 @@ export const ProductComparison = ({
     }
     return null;
   };
+
+  useEffect(() => {
+    const fetchSimilarProducts = async () => {
+      if (!productId) {
+        setLoadingComparisons(false);
+        return;
+      }
+
+      setLoadingComparisons(true);
+      setError(null);
+
+      try {
+        const res = await axios.post<SimilarProductData[]>( // Specify response type
+          `${import.meta.env.VITE_API_URL}/compare`,
+          { productId: productId, productTitle: productName },
+          {
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // Include the Bearer token
+            },
+          },
+        );
+
+        const backendData = res.data; // Axios puts the response data in .data
+        setSimilarProducts(backendData);
+        toast({
+          title: "Comparison data updated",
+          description: "Fetched fresh comparison data.",
+        });
+      } catch (err: any) {
+        console.error("Error fetching similar products:", err);
+        const errorMessage =
+          err.response?.data?.detail ||
+          err.message ||
+          "Something went wrong fetching similar products.";
+        setError(errorMessage);
+        toast({
+          title: "Comparison Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+        setSimilarProducts([]); // Clear any old data on error
+      } finally {
+        setLoadingComparisons(false);
+      }
+    };
+
+    fetchSimilarProducts();
+  }, [productId, productName, toast]);
 
   return (
     <motion.div
@@ -154,217 +241,91 @@ export const ProductComparison = ({
         </CardHeader>
 
         <CardContent>
-          <Tabs defaultValue="comparison" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
-              <TabsTrigger value="comparison">Comparison</TabsTrigger>
-              <TabsTrigger value="history">Price History</TabsTrigger>
+          <Tabs defaultValue="similar" className="w-full">
+            <TabsList className="grid w-full grid-cols-1 mb-6">
+              <TabsTrigger value="similar">Similar Products</TabsTrigger>{" "}
+              {/* New Tab */}
             </TabsList>
 
-            <TabsContent value="comparison" className="space-y-4">
-              <div className="grid gap-4">
-                {sortedPlatforms.map((platform, index) => {
-                  const isLowestPrice = index === 0;
-                  const totalPrice =
-                    platform.currentPrice + (platform.shipping || 0);
-
-                  return (
+            {/* NEW Tab Content for Similar Products */}
+            <TabsContent value="similar" className="space-y-4">
+              {loadingComparisons ? (
+                <div className="grid gap-4">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={`similar-skeleton-${i}`}>
+                      <CardContent className="p-4 flex items-center gap-4">
+                        <Skeleton className="h-20 w-20 rounded-md" />
+                        <div className="flex-1 space-y-2">
+                          <Skeleton className="h-5 w-3/4" />
+                          <Skeleton className="h-4 w-1/2" />
+                          <Skeleton className="h-4 w-1/3" />
+                        </div>
+                        <Skeleton className="h-9 w-24" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : error ? (
+                <div className="text-center py-8 text-red-500">
+                  <p>{error}</p>
+                  <p>Could not load similar products.</p>
+                </div>
+              ) : similarProducts.length > 0 ? (
+                <div className="grid gap-4">
+                  {similarProducts.map((similarProduct, index) => (
                     <motion.div
-                      key={platform.platform}
+                      key={similarProduct.productId}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ duration: 0.3, delay: index * 0.1 }}
                     >
-                      <Card
-                        className={`${isLowestPrice ? "border-green-500 dark:border-green-600" : ""} overflow-hidden`}
-                      >
-                        {isLowestPrice && (
-                          <div className="bg-green-500 text-white text-xs font-medium text-center py-1">
-                            BEST PRICE
+                      <Card>
+                        <CardContent className="p-4 flex items-center gap-4">
+                          <div className="h-20 w-20 flex-shrink-0 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
+                            <img
+                              src={similarProduct.image}
+                              alt={similarProduct.name}
+                              className="max-w-full max-h-full object-contain"
+                            />
                           </div>
-                        )}
-
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className="h-8 w-8 rounded-md overflow-hidden bg-gray-100 flex items-center justify-center">
-                                <img
-                                  src={platform.logo}
-                                  alt={platform.platform}
-                                  className="max-w-full max-h-full object-contain"
-                                />
-                              </div>
-
-                              <div>
-                                <h3 className="font-medium">
-                                  {platform.platform}
-                                </h3>
-                                <div className="flex items-center text-sm gap-1 text-gray-500">
-                                  {platform.available ? (
-                                    <span className="text-green-500 text-xs">
-                                      In Stock
-                                    </span>
-                                  ) : (
-                                    <span className="text-gray-500 text-xs">
-                                      Out of Stock
-                                    </span>
-                                  )}
-
-                                  {platform.trend !== "stable" &&
-                                    platform.trendAmount && (
-                                      <span
-                                        className={`flex items-center gap-1 text-xs ${getTrendColor(platform.trend)}`}
-                                      >
-                                        • {getTrendIcon(platform.trend)}
-                                        {platform.trend === "down" ? "-" : "+"}
-                                        {formatPrice(platform.trendAmount)}
-                                      </span>
-                                    )}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="text-right">
-                              <div className="flex items-baseline gap-2">
-                                <span className="font-bold text-lg">
-                                  {formatPrice(
-                                    platform.currentPrice,
-                                    platform.currency,
-                                  )}
-                                </span>
-                                {platform.discount && (
-                                  <span className="text-sm line-through text-gray-500">
-                                    {formatPrice(
-                                      platform.discount.originalPrice,
-                                      platform.currency,
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-
-                              {platform.shipping !== undefined && (
-                                <div className="text-sm text-gray-500">
-                                  {platform.shipping > 0
-                                    ? `+ ${formatPrice(platform.shipping, platform.currency)} shipping`
-                                    : "Free shipping"}
-                                </div>
+                          <div className="flex-1">
+                            <h3 className="font-medium text-base line-clamp-2">
+                              {similarProduct.name}
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                              {similarProduct.platform}
+                            </p>
+                            <p className="font-bold text-lg mt-1">
+                              {formatPrice(
+                                similarProduct.currentPrice,
+                                similarProduct.currency,
                               )}
-                            </div>
+                            </p>
                           </div>
-
-                          <div className="mt-3 flex justify-end">
-                            <Button
-                              asChild
-                              variant="outline"
-                              size="sm"
-                              className="gap-1"
+                          <Button
+                            asChild
+                            variant="outline"
+                            size="sm"
+                            className="gap-1 flex-shrink-0"
+                          >
+                            <a
+                              href={similarProduct.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
                             >
-                              <a
-                                href={platform.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                View <ExternalLink className="h-3.5 w-3.5" />
-                              </a>
-                            </Button>
-                          </div>
+                              View <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </Button>
                         </CardContent>
                       </Card>
                     </motion.div>
-                  );
-                })}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="history" className="space-y-4">
-              <div className="w-full">
-                <TabsList className="mb-4 w-full justify-start overflow-auto pb-1">
-                  {platforms.map((platform) => (
-                    <TabsTrigger
-                      key={platform.platform}
-                      value={platform.platform}
-                      onClick={() => setActivePlatform(platform.platform)}
-                      className="min-w-fit"
-                    >
-                      {platform.platform}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-
-                <div className="h-[250px]">
-                  {platforms.map((platform) => (
-                    <div
-                      key={platform.platform}
-                      className={
-                        activePlatform === platform.platform
-                          ? "block"
-                          : "hidden"
-                      }
-                    >
-                      {platform.priceHistory &&
-                      platform.priceHistory.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%">
-                          <AreaChart data={platform.priceHistory}>
-                            <defs>
-                              <linearGradient
-                                id={`color${platform.platform}`}
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                              >
-                                <stop
-                                  offset="5%"
-                                  stopColor="#1a73e8"
-                                  stopOpacity={0.8}
-                                />
-                                <stop
-                                  offset="95%"
-                                  stopColor="#1a73e8"
-                                  stopOpacity={0.1}
-                                />
-                              </linearGradient>
-                            </defs>
-                            <CartesianGrid
-                              strokeDasharray="3 3"
-                              stroke={theme === "dark" ? "#444" : "#ddd"}
-                            />
-                            <XAxis
-                              dataKey="date"
-                              tickFormatter={(tick) => {
-                                const date = new Date(tick);
-                                return `${date.getMonth() + 1}/${date.getDate()}`;
-                              }}
-                              stroke={theme === "dark" ? "#999" : "#666"}
-                            />
-                            <YAxis
-                              tickFormatter={(tick) =>
-                                formatPrice(tick, platform.currency)
-                              }
-                              width={65}
-                              stroke={theme === "dark" ? "#999" : "#666"}
-                            />
-                            <Tooltip content={renderCustomTooltip} />
-                            <Area
-                              type="monotone"
-                              dataKey="price"
-                              stroke="#1a73e8"
-                              fillOpacity={1}
-                              fill={`url(#color${platform.platform})`}
-                              animationDuration={1500}
-                            />
-                          </AreaChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center">
-                          <p className="text-gray-500">
-                            No price history available for {platform.platform}
-                          </p>
-                        </div>
-                      )}
-                    </div>
                   ))}
                 </div>
-              </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  No similar products found for this item.
+                </div>
+              )}
             </TabsContent>
           </Tabs>
         </CardContent>
@@ -386,30 +347,34 @@ export const ProductComparisonSkeleton = () => {
           <div className="flex gap-2 mb-4">
             <Skeleton className="h-10 w-full" />
             <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-10 w-full" /> {/* Added for new tab */}
           </div>
 
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="overflow-hidden">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <Skeleton className="h-8 w-8 rounded-md" />
-                    <div>
-                      <Skeleton className="h-5 w-24" />
-                      <Skeleton className="h-4 w-16 mt-1" />
+          {/* Skeleton for main product comparison */}
+          <div className="grid gap-4">
+            {[1, 2, 3].map((i) => (
+              <Card key={`main-skeleton-${i}`} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="h-8 w-8 rounded-md" />
+                      <div>
+                        <Skeleton className="h-5 w-24" />
+                        <Skeleton className="h-4 w-16 mt-1" />
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <Skeleton className="h-6 w-20" />
+                      <Skeleton className="h-4 w-24 mt-1" />
                     </div>
                   </div>
-                  <div className="text-right">
-                    <Skeleton className="h-6 w-20" />
-                    <Skeleton className="h-4 w-24 mt-1" />
+                  <div className="mt-3 flex justify-end">
+                    <Skeleton className="h-9 w-20" />
                   </div>
-                </div>
-                <div className="mt-3 flex justify-end">
-                  <Skeleton className="h-9 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -5,8 +5,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict, Any, Union # Added Union for PriceChange
 from datetime import datetime
+from google.cloud.firestore import SERVER_TIMESTAMP
 import logging
+from app.scraper.keyword_extractor import extract_brand_model
+from app.scraper.platform_scraper import search_other_platforms
 import os
+import re
 import traceback
 
 # Local imports (ensure these paths are correct relative to your project structure)
@@ -92,6 +96,20 @@ class ProductResponse(BaseModel):
 class PriceHistoryEntry(BaseModel):
     date: str # ISO formatted datetime string
     price: float
+
+class CompareRequest(BaseModel):
+    productId: str # The ID of the primary product for which we're finding similar items
+    productTitle: str # The title of the primary product to use for search
+
+# Define the structure for a single similar product to be returned
+class SimilarProductResponse(BaseModel):
+    productId: str      # Unique ID for the similar product (can be its URL or a generated ID)
+    name: str           
+    platform: str       
+    url: str            
+    image: str          
+    currentPrice: float 
+    currency: str       
 
 # Dependency to verify Firebase ID token
 async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
@@ -321,4 +339,154 @@ async def get_price_history(product_id: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to fetch price history: {str(e)}"
         )
+
+@app.post("/compare", response_model=List[SimilarProductResponse], status_code=status.HTTP_200_OK)
+async def compare_product(
+    request: CompareRequest,
+    user: dict = Depends(verify_token)
+):
+    """
+    Find similar products across platforms with enhanced error handling and debugging.
+    Returns list of similar products with their details.
+    """
+    try:
+        logger.info(f"Starting product comparison for: {request.productId} - '{request.productTitle}'")
+        
+        # Validate input
+        if not request.productTitle or len(request.productTitle.strip()) < 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Product title must be at least 3 characters long"
+            )
+        
+        # Call the enhanced service function
+        similar_products = await firebase.get_or_generate_comparison(
+            request.productId,
+            request.productTitle.strip()
+        )
+        
+        # Enhanced logging for debugging
+        platforms_found = list(set(p.get("platform", "Unknown") for p in similar_products))
+        logger.info(f"Found {len(similar_products)} products across platforms: {platforms_found}")
+        
+        # Log individual products for debugging
+        for i, product in enumerate(similar_products):
+            logger.info(f"Product {i+1}: {product.get('platform', 'Unknown')} - {product.get('name', 'Unknown')[:50]}... - Price: {product.get('currency', '₹')}{product.get('currentPrice', 0)}")
+        
+        # If we got fewer than expected, log a warning
+        if len(similar_products) < 3:
+            logger.warning(f"Only found {len(similar_products)} products for '{request.productTitle}'. Expected 3.")
+        
+        # Ensure we return valid data
+        validated_products = []
+        for product in similar_products:
+            if validate_product_response(product):
+                validated_products.append(product)
+            else:
+                logger.warning(f"Skipping invalid product: {product}")
+        
+        if not validated_products:
+            # If no valid products found, try a debug search to understand why
+            debug_info = await firebase.debug_search_results(request.productTitle)
+            logger.error(f"No valid products found. Debug info: {debug_info}")
+            
+            # Return empty list instead of error to maintain API contract
+            return []
+        
+        logger.info(f"Successfully returning {len(validated_products)} validated products for {request.productId}")
+        return validated_products
+
+    except HTTPException as e:
+        # Re-raise explicit HTTPExceptions
+        logger.error(f"HTTP Exception in /compare endpoint: {e.detail}")
+        raise e
+    except Exception as e:
+        # Log the full traceback for debugging
+        error_traceback = traceback.format_exc()
+        logger.error(f"Unhandled error in /compare endpoint for product {request.productId}: {error_traceback}")
+        
+        # Return a more helpful error message
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to find similar products. Please try again with a different product title."
+        )
+
+def validate_product_response(product: dict) -> bool:
+    """
+    Validate that a product response has all required fields with valid data.
+    """
+    required_fields = ["productId", "name", "platform", "url", "currentPrice"]
     
+    # Check all required fields exist
+    if not all(field in product for field in required_fields):
+        return False
+    
+    # Check field values are valid
+    if not product["name"].strip():
+        return False
+    
+    if not product["url"].strip():
+        return False
+    
+    if product["platform"] not in ["Flipkart", "Meesho", "Amazon"]:
+        return False
+    
+    # Price should be non-negative number
+    try:
+        price = float(product["currentPrice"])
+        if price < 0:
+            return False
+    except (ValueError, TypeError):
+        return False
+    
+    return True
+
+# Optional: Add a debug endpoint for testing
+@app.post("/compare/debug", status_code=status.HTTP_200_OK)
+async def debug_compare_product(
+    request: CompareRequest,
+    user: dict = Depends(verify_token)
+):
+    """
+    Debug endpoint to test search functionality and see intermediate results.
+    """
+    try:
+        debug_info = await firebase.debug_search_results(request.productTitle)
+        return debug_info
+    except Exception as e:
+        logger.error(f"Debug endpoint error: {traceback.format_exc()}")
+        return {"error": str(e)}
+
+# Optional: Add an endpoint to force refresh comparison data
+@app.post("/compare/refresh", response_model=List[SimilarProductResponse], status_code=status.HTTP_200_OK)
+async def refresh_comparison(
+    request: CompareRequest,
+    user: dict = Depends(verify_token)
+):
+    """
+    Force refresh comparison data (bypass cache).
+    """
+    try:
+        logger.info(f"Force refreshing comparison data for: {request.productId}")
+        
+        # Delete existing cache
+        comparison_ref = firebase.db.collection("comparisons").document(request.productId)
+        if comparison_ref.get().exists:
+            comparison_ref.delete()
+            logger.info(f"Deleted cached data for {request.productId}")
+        
+        # Generate fresh data
+        similar_products = await firebase.get_or_generate_comparison(
+            request.productId,
+            request.productTitle
+        )
+        
+        logger.info(f"Force refresh returned {len(similar_products)} products for {request.productId}")
+        return similar_products
+        
+    except Exception as e:
+        logger.error(f"Force refresh error: {traceback.format_exc()}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to refresh comparison data"
+        )

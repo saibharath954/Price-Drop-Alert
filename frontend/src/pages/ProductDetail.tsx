@@ -183,14 +183,14 @@ const ProductDetail = () => {
                 />
               </div>
             </div>
-            {comparisonData.length > 0 && (
-              <div className="pt-6">
-                <ProductComparison
-                  productName={productData.name}
-                  platforms={comparisonData}
-                />
-              </div>
-            )}
+
+            <div className="pt-6">
+              <ProductComparison
+                productId={productId!}
+                productName={productData.name}
+                platforms={comparisonData}
+              />
+            </div>
 
             <div className="pt-4">
               <Card
@@ -200,14 +200,14 @@ const ProductDetail = () => {
                   <CardTitle>Stats & Analytics</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Tabs defaultValue="price-stats">
+                  <Tabs defaultValue="price-alerts">
                     <TabsList>
+                      <TabsTrigger value="price-alerts">
+                        Your Alerts
+                      </TabsTrigger>
                       <TabsTrigger value="price-stats">Price Stats</TabsTrigger>
                       <TabsTrigger value="price-forecast">
                         Price Forecast
-                      </TabsTrigger>
-                      <TabsTrigger value="price-alerts">
-                        Your Alerts
                       </TabsTrigger>
                     </TabsList>
 
@@ -349,7 +349,7 @@ const ProductDetail = () => {
                               Active price alert for {productData.name}
                             </p>
                             <p className="text-gray-500 mb-6">
-                              You'll be notified at {user?.email} when the price
+                              You'll be notified to the mail when the price
                               drops below {productData.currency}
                               {productData.targetPrice}
                             </p>

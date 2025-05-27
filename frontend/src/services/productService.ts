@@ -16,6 +16,7 @@ import {
   AlertData,
   PriceHistoryEntry,
   PriceDataPoint,
+  ComparisonDocumentData,
 } from "@/types";
 import {
   transformProductFromFirestore,
@@ -101,15 +102,25 @@ export const getPlatformComparisons = async (
   productId: string,
 ): Promise<PlatformPriceData[]> => {
   try {
-    const comparisonsRef = collection(db, "products", productId, "comparisons");
-    const querySnapshot = await getDocs(comparisonsRef);
+    // 1. Reference the specific document in the top-level 'comparisons' collection
+    const comparisonDocRef = doc(db, "comparisons", productId);
 
-    return querySnapshot.docs.map((doc) =>
-      transformPlatformData({
-        id: doc.id,
-        ...doc.data(),
-      }),
-    );
+    // 2. Fetch the document
+    const docSnap = await getDoc(comparisonDocRef);
+
+    // 3. Check if the document exists
+    if (docSnap.exists()) {
+      // 4. Cast the data to your expected interface
+      const data = docSnap.data() as ComparisonDocumentData;
+
+      // 5. Return the similarProducts array.
+      // Ensure data.similarProducts is an array, as it might be undefined or null if not set
+      return data.similarProducts || [];
+    } else {
+      // Document does not exist, meaning no comparison data for this product yet
+      console.warn(`No comparison document found for productId: ${productId}`);
+      return [];
+    }
   } catch (error) {
     console.error("Error fetching platform comparisons:", error);
     return [];

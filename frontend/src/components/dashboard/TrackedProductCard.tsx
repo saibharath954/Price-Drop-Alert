@@ -122,19 +122,6 @@ export const TrackedProductCard: React.FC<TrackedProductCardProps> = ({
       </CardContent>
       <CardFooter className="p-3 border-t flex justify-between">
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleToggleAlert}>
-            {product.alertEnabled ? (
-              <>
-                <BellOff className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Disable Alert</span>
-              </>
-            ) : (
-              <>
-                <Bell className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Enable Alert</span>
-              </>
-            )}
-          </Button>
           <Button variant="outline" size="sm" asChild>
             <a href={product.url} target="_blank" rel="noopener noreferrer">
               <ExternalLink className="h-4 w-4 mr-2" />
