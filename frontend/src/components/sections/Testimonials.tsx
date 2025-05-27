@@ -19,7 +19,7 @@ const Testimonials = () => {
       name: "Sarah Johnson",
       role: "Tech Enthusiast",
       location: "Mumbai, India",
-      image: "/api/placeholder/64/64",
+      image: "/Student4.jpg",
       rating: 5,
       savings: "₹15,000",
       content:
@@ -32,7 +32,7 @@ const Testimonials = () => {
       name: "Rajesh Kumar",
       role: "Small Business Owner",
       location: "Delhi, India",
-      image: "/api/placeholder/64/64",
+      image: "/Student3.jpg",
       rating: 5,
       savings: "₹50,000",
       content:
@@ -45,7 +45,7 @@ const Testimonials = () => {
       name: "Priya Sharma",
       role: "Fashion Blogger",
       location: "Bangalore, India",
-      image: "/api/placeholder/64/64",
+      image: "Student2.jpg",
       rating: 5,
       savings: "₹8,500",
       content:
@@ -58,7 +58,7 @@ const Testimonials = () => {
       name: "Amit Patel",
       role: "Software Engineer",
       location: "Pune, India",
-      image: "/api/placeholder/64/64",
+      image: "Student1.jpg",
       rating: 5,
       savings: "₹12,000",
       content:

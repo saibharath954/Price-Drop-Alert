@@ -241,15 +241,7 @@ export const Header = () => {
                       <span>Dashboard</span>
                     </Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link
-                      to="/settings"
-                      className="flex w-full cursor-pointer items-center"
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </Link>
-                  </DropdownMenuItem>
+
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="cursor-pointer" onClick={logout}>
                     <LogOut className="mr-2 h-4 w-4" />
@@ -350,17 +342,7 @@ export const Header = () => {
                 >
                   Dashboard
                 </Link>
-                <Link
-                  to="/settings"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                  className={`block px-4 py-3 rounded-lg text-base font-medium transition-all duration-200 ${
-                    theme === "dark"
-                      ? "text-gray-300 hover:text-white hover:bg-gray-800"
-                      : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                  }`}
-                >
-                  Settings
-                </Link>
+                
                 <button
                   onClick={() => {
                     logout();
